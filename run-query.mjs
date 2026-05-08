@@ -9,13 +9,13 @@
 //   npm run query -- --help      → diese Hilfe
 // =============================================================================
 
-import { spawnSync }                    from 'child_process';
-import { existsSync, readFileSync }     from 'fs';
-import { join, dirname, basename }      from 'path';
-import { fileURLToPath }                from 'url';
-import { createRequire }                from 'module';
-import readline                         from 'readline';
-import { QueryEngine }                  from '@comunica/query-sparql-file';
+import { spawnSync }                              from 'child_process';
+import { existsSync, readFileSync, readdirSync }  from 'fs';
+import { join, dirname, basename, extname }      from 'path';
+import { fileURLToPath }                         from 'url';
+import { createRequire }                         from 'module';
+import readline                                  from 'readline';
+import { QueryEngine }                           from '@comunica/query-sparql-file';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -68,33 +68,67 @@ function queryTitle(rqPath) {
 }
 
 // ---------------------------------------------------------------------------
-// Query-Katalog
+// Query-Katalog  –  vollständig dynamisch aus dem Dateisystem gebaut
 // ---------------------------------------------------------------------------
-const PERSONEN_TTL = ['thomas','sarah','julia','lena','marco']
-  .map(n => join(GRAPH, `personen/${n}.ttl`));
 
-const ENTRIES = [
-  // ── Glossar ──────────────────────────────────────────────────────────────
-  { section: 'Glossar',   rq: 'glossary/alle-konzepte.rq',                ttl: ['glossary.ttl'] },
-  { section: 'Glossar',   rq: 'glossary/top-konzepte.rq',                 ttl: ['glossary.ttl'] },
-  { section: 'Glossar',   rq: 'glossary/hierarchie.rq',                   ttl: ['glossary.ttl'] },
-  // ── Versand ──────────────────────────────────────────────────────────────
-  { section: 'Versand',   rq: 'versand/alle-versandpartner.rq',            ttl: ['versand.ttl'] },
-  { section: 'Versand',   rq: 'versand/lieferlaender-pro-partner.rq',      ttl: ['versand.ttl'] },
-  { section: 'Versand',   rq: 'versand/kostenlos-versand-schwellenwerte.rq', ttl: ['versand.ttl'] },
-  { section: 'Versand',   rq: 'versand/laendersperren.rq',                 ttl: ['versand.ttl'] },
-  { section: 'Versand',   rq: 'versand/offene-punkte.rq',                  ttl: ['versand.ttl'] },
-  // ── Personen ─────────────────────────────────────────────────────────────
-  { section: 'Personen',  rq: 'personen/alle-stakeholder.rq',              ttl: PERSONEN_TTL, ttlAbsolute: true },
-  { section: 'Personen',  rq: 'personen/entscheidungen-pro-person.rq',     ttl: PERSONEN_TTL, ttlAbsolute: true },
-  { section: 'Personen',  rq: 'personen/offene-fragen.rq',                 ttl: PERSONEN_TTL, ttlAbsolute: true },
-].map((e, i) => ({
-  idx:     i,
-  section: e.section,
-  label:   queryTitle(join(QUERIES, e.rq)),
-  rq:      join(QUERIES, e.rq),
-  ttl:     e.ttlAbsolute ? e.ttl : e.ttl.map(f => join(GRAPH, f)),
-}));
+/** Sammelt rekursiv alle *.ttl-Dateien unterhalb von `dir`. */
+function collectTtl(dir) {
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory())                              files.push(...collectTtl(full));
+    else if (entry.isFile() && extname(entry.name) === '.ttl') files.push(full);
+  }
+  return files;
+}
+
+/** Alle TTL-Dateien im gesamten graph/-Verzeichnis. */
+const ALL_TTL = collectTtl(GRAPH);
+
+/**
+ * Wandelt einen Ordnernamen wie "versand" in einen lesbaren Sektionsnamen
+ * (erster Buchstabe groß) um.
+ */
+function sectionName(folder) {
+  return folder.charAt(0).toUpperCase() + folder.slice(1);
+}
+
+/**
+ * Liest `queries/` dynamisch ein:
+ *   queries/<sektion>/<name>.rq  →  ein ENTRY pro .rq-Datei
+ * Sektionen werden alphabetisch sortiert, Queries innerhalb einer Sektion
+ * ebenfalls alphabetisch.
+ * Jede Query läuft gegen alle TTL-Dateien in graph/.
+ */
+function buildEntries() {
+  if (!existsSync(QUERIES)) return [];
+
+  const entries = [];
+
+  const sectionFolders = readdirSync(QUERIES, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name)
+    .sort();
+
+  for (const folder of sectionFolders) {
+    const sec    = sectionName(folder);
+    const secDir = join(QUERIES, folder);
+
+    const rqFiles = readdirSync(secDir, { withFileTypes: true })
+      .filter(f => f.isFile() && extname(f.name) === '.rq')
+      .map(f => f.name)
+      .sort();
+
+    for (const rqFile of rqFiles) {
+      const rqPath = join(secDir, rqFile);
+      entries.push({ section: sec, label: queryTitle(rqPath), rq: rqPath, ttl: ALL_TTL });
+    }
+  }
+
+  return entries.map((e, i) => ({ idx: i, ...e }));
+}
+
+const ENTRIES = buildEntries();
 
 // ---------------------------------------------------------------------------
 // Wert eines RDF-Terms bereinigt darstellen
@@ -259,12 +293,13 @@ function printHeader() {
   console.log('');
 }
 
-const SECTION_ORDER = ['Glossar', 'Versand', 'Personen'];
+// Sektionsreihenfolge wird dynamisch aus ENTRIES abgeleitet (Einfügereihenfolge)
+const SECTION_ORDER = [...new Set(ENTRIES.map(e => e.section))];
 
 function sectionHeader(sec) {
-  const fn = SECTION_COLORS[sec] ?? white;
-  const bars = '─'.repeat(48 - sec.length);
-  return fn(bold(`── ${sec} ${bars}`));
+  const fn  = SECTION_COLORS[sec] ?? white;
+  const len = Math.max(4, 48 - sec.length);
+  return fn(bold(`── ${sec} ${'─'.repeat(len)}`));
 }
 
 // Fuzzy-Filter: alle Buchstaben des Suchbegriffs müssen in Label erscheinen
