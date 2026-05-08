@@ -80,25 +80,25 @@
     skos:definition "Physische Unterkategorie von Kleidung; umfasst Schmuck und Taschen."@de;
     skos:broader :Kleidung;
     skos:related :Schuhe.
-:Haushalt a skos:Concept;
+:Haushalt a skos:Concept, owl:Class;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Haushalt"@de;
     skos:definition "Physische Produktkategorie für Haushaltsartikel."@de;
     skos:broader :Produktkategorie;
     skos:related :Mobel, :Sperrgut.
-:Mobel a skos:Concept;
+:Mobel a skos:Concept, owl:Class;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Möbel"@de;
     skos:definition "Physische Unterkategorie von Haushalt; erfordert gesonderte Versandregeln als Sperrgut."@de;
     skos:broader :Haushalt;
     skos:related :Sperrgut, :Sperrgut.
-:Lebensmittel a skos:Concept;
+:Lebensmittel a skos:Concept, owl:Class;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Lebensmittel"@de;
     skos:definition "Physische Produktkategorie mit besonderer Behandlung: nur Lieferung in DE und AT, keine Rabatte, ggf. Kühlpflicht."@de;
     skos:broader :Produktkategorie;
     skos:related :Kuhlpflichtiger_Artikel, :Landerbeschrankung, :Rabattfrei.
-:Digitales_Produkt a skos:Concept;
+:Digitales_Produkt a skos:Concept, owl:Class;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Digitales Produkt"@de;
     skos:altLabel "digitale Lieferung"@de;
@@ -181,13 +181,13 @@
     skos:altLabel "offener Mahnfall"@de;
     skos:definition "Kundenstatus mit offenen, überfälligen Forderungen; schließt die Zahlungsart Rechnung aus."@de;
     skos:related :Bestandskunde, :Rechnung.
-:Versandpartner a skos:Concept;
+:Versandpartner a skos:Concept, owl:Class;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Versandpartner"@de;
     skos:altLabel "Versandanbieter"@de;
     skos:definition "Externes Logistikunternehmen, das den physischen Warenversand durchführt (z. B. DHL, DPD, Spedition)."@de;
     skos:related :Versandoption, :Lieferzeit, :Landerbeschrankung.
-:Versandoption a skos:Concept;
+:Versandoption a skos:Concept, owl:Class;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Versandoption"@de;
     skos:definition "Konkrete Versandvariante mit definiertem Anbieter, Lieferzeit und Geltungsbereich."@de;
@@ -219,7 +219,7 @@
     skos:definition "Lebensmittel, die eine Kühlkette während des Versands erfordern; Sonderfall noch offen."@de;
     skos:broader :Lebensmittel;
     skos:related :Versandoption.
-:Landerbeschrankung a skos:Concept;
+:Landerbeschrankung a skos:Concept, owl:Class;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Länderbeschränkung"@de;
     skos:altLabel "Sperrliste"@de;

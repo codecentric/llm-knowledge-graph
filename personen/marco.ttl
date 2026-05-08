@@ -1,0 +1,53 @@
+@prefix :       <https://shop.example.org/glossary#> .
+@prefix person: <https://shop.example.org/personen#> .
+@prefix versand: <https://shop.example.org/versand#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+
+person:Marco a foaf:Person, owl:NamedIndividual ;
+    foaf:firstName   "Marco" ;
+    foaf:lastName    "unbekannt" ;
+    org:role         person:Rolle_Entwicklung ;
+    rdfs:label       "Marco (Entwicklung)"@de ;
+    dct:description  "Entwickler im Shop-Projekt. Stellt technische Rückfragen zu Regelkonflikten und ist für die Implementierung von Rabatt- und Versandlogik zuständig."@de ;
+    dct:source       <inputs/meeting-checkout-versand.md>,
+                     <inputs/slack-export-preisregeln.md> ;
+    person:hatInitiiert
+        person:Frage_Sperrliste_vs_Kategorie ,  # „Brauchen wir eine generische Sperrliste?"
+        person:Frage_Treuerabatt_Kombi ,         # „Gilt das auch für Treuerabatte?"
+        person:Frage_Bundle_Digital ,            # „Was ist mit Bundles?"
+        person:Frage_Gutschein_Mehrfach .        # „Kann ein Kunde mehrere Gutscheincodes einlösen?"
+
+person:Frage_Sperrliste_vs_Kategorie a person:OffeneFrage ;
+    rdfs:label   "Frage: generische Sperrliste oder kategoriebasiert?"@de ;
+    dct:source   <inputs/meeting-checkout-versand.md> ;
+    person:beantwortetDurch "Kategoriebasiert mit SKU-Überschreibungsoption."@de ;
+    person:beantwortetVon   person:Sarah .
+
+person:Frage_Treuerabatt_Kombi a person:OffeneFrage ;
+    rdfs:label   "Frage: Gilt Rabattausschluss auch für Treuerabatte?"@de ;
+    dct:source   <inputs/slack-export-preisregeln.md> ;
+    person:beantwortetDurch "Treuerabatte sind ausgenommen, max. 10 %."@de ;
+    person:beantwortetVon   person:Sarah .
+
+person:Frage_Bundle_Digital a person:OffeneFrage ;
+    rdfs:label   "Frage: Rabattregeln für gemischte Bundles?"@de ;
+    dct:source   <inputs/slack-export-preisregeln.md> ;
+    person:beantwortetDurch "Rabattfrei wenn digitaler Anteil > 50 % des Bruttopreises."@de ;
+    person:beantwortetVon   person:Lena .
+
+person:Frage_Gutschein_Mehrfach a person:OffeneFrage ;
+    rdfs:label   "Frage: Mehrere Gutscheincodes pro Bestellung?"@de ;
+    dct:source   <inputs/slack-export-preisregeln.md> ;
+    person:beantwortetDurch "Genau ein Gutscheincode pro Bestellung, keine Ausnahmen."@de ;
+    person:beantwortetVon   person:Sarah .
+
+person:Rolle_Entwicklung a org:Role ;
+    rdfs:label  "Entwicklung"@de ;
+    skos:altLabel "Dev"@de .

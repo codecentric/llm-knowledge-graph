@@ -1,0 +1,40 @@
+@prefix :       <https://shop.example.org/glossary#> .
+@prefix person: <https://shop.example.org/personen#> .
+@prefix versand: <https://shop.example.org/versand#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+
+person:Thomas a foaf:Person, owl:NamedIndividual ;
+    foaf:firstName   "Thomas" ;
+    foaf:lastName    "unbekannt" ;
+    org:role         person:Rolle_Geschaeftsfuehrung ;
+    rdfs:label       "Thomas (Geschäftsführung)"@de ;
+    dct:description  "Geschäftsführer. Trifft finale strategische Entscheidungen zu Kosten und Scope. Hat PayPal-Beschränkung auf EU/UK/CH begründet und Ratenkauf aus dem Scope genommen."@de ;
+    dct:source       <inputs/meeting-checkout-versand.md> ;
+    person:hatEntschieden
+        person:Entscheidung_PayPal_Geo ,
+        person:Entscheidung_Ratenkauf_OutOfScope ;
+    person:hatOffenePunkte
+        versand:OffenerPunkt_AT_CH_Schwellenwert .  # Deadline 2024-03-15
+
+person:Entscheidung_PayPal_Geo a person:Entscheidung ;
+    rdfs:label      "Entscheidung: PayPal nur EU + UK + Schweiz"@de ;
+    dct:description "PayPal-Gebühren außerhalb EU zu hoch, nicht rentabel. Zitat Thomas: „PayPal-Gebühren außerhalb EU zu hoch, nicht rentabel.""@de ;
+    dct:date        "2024-03-05"^^xsd:date ;
+    dct:source      <inputs/meeting-checkout-versand.md> .
+
+person:Entscheidung_Ratenkauf_OutOfScope a person:Entscheidung ;
+    rdfs:label      "Entscheidung: Ratenkauf vorerst aus Scope"@de ;
+    dct:description "Ratenkauf wurde von Thomas erwähnt aber für den Launch-Scope explizit ausgeschlossen."@de ;
+    dct:date        "2024-03-05"^^xsd:date ;
+    dct:source      <inputs/meeting-checkout-versand.md> .
+
+person:Rolle_Geschaeftsfuehrung a org:Role ;
+    rdfs:label   "Geschäftsführung"@de ;
+    skos:altLabel "GF"@de .
