@@ -31,6 +31,8 @@ Der Graph modelliert vier zentrale Bereiche:
 
 Der Graph wird als **RDF-Ontologie** modelliert. RDF (Resource Description Framework) ist ein W3C-Standard zur Wissensrepräsentation – Fakten werden als Tripel gespeichert: **Subjekt → Prädikat → Objekt**. Abfragen erfolgen über **SPARQL**, die standardisierte Abfragesprache für RDF-Graphen. Dieser Ansatz macht das Wissen nicht nur maschinenlesbar, sondern auch interoperabel und erweiterbar.
 
+Alle SPARQL-Abfragen sind als wiederverwendbare `.rq`-Dateien in `queries/` hinterlegt – geordnet nach Fachmodul, direkt ausführbar, mit Ausführungsbefehl als Kommentar in jeder Datei.
+
 ---
 
 ## Das Problem: LLMs als Wissensspeicher
@@ -80,7 +82,7 @@ Das LLM muss **nicht mehr wissen** – es muss nur noch **fragen und erklären**
 ├── graph/                 # Alle RDF-Dateien des Knowledge Graphs
 ├── inputs/                # Rohdaten, die als Basis für die Graphgenerierung dienen
 │   └── ...                #   freie Struktur – Unterordner, Dateien, wie es passt
-└── queries/               # Beispielabfragen (SPARQL)
+└── queries/               # SPARQL-Abfragen, nach Fachmodul geordnet
 ```
 
 ### `graph/` – Der Knowledge Graph

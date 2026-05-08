@@ -214,6 +214,39 @@ Mit URIs sind Fragen wie *„Welche Regeln hat Julia definiert?"*, *„Welche of
 
 ---
 
+## Prinzip 7: Jede neue TTL-Datei braucht vollständige Prefix-Deklarationen
+
+**Entscheidung:** Jede `.ttl`-Datei deklariert alle Prefixe, die sie verwendet – auch wenn benachbarte Dateien im selben Verzeichnis sie bereits deklarieren. RDF-Dateien werden einzeln oder in beliebiger Kombination geladen; ein Parser kennt nur die Prefixe der Datei, die er gerade liest.
+
+### Checkliste beim Anlegen einer neuen TTL-Datei
+
+1. Alle verwendeten Präfixe per `grep -o '[a-z]*:' datei.ttl | sort -u` ermitteln
+2. Für jeden Präfix prüfen ob `@prefix xyz: <...> .` oben in der Datei steht
+3. Keine typografischen Anführungszeichen (`„“`) innerhalb von Turtle-Literals – nur `"..."`; innere Anführungszeichen als einfache Hochkommas (`'`) oder mit `\"` escapen
+4. Nach dem Anlegen/Ändern validieren: `cd /workspace && npm run validate`
+
+### Standardsatz Prefixe für dieses Depot
+
+```turtle
+@prefix :        <https://shop.example.org/glossary#> .
+@prefix versand: <https://shop.example.org/versand#> .
+@prefix person:  <https://shop.example.org/personen#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix foaf:    <http://xmlns.com/foaf/0.1/> .
+@prefix org:     <http://www.w3.org/ns/org#> .
+@prefix schema:  <https://schema.org/> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+```
+
+Nur die tatsächlich verwendeten Prefixe einbinden, aber lieber einen zu viel als einen zu wenig.
+
+---
+
 ## Entscheidungslog
 
 | Datum | Entscheidung | Begründung |
@@ -224,3 +257,4 @@ Mit URIs sind Fragen wie *„Welche Regeln hat Julia definiert?"*, *„Welche of
 | 2026-05-08 | SHACL-Schweregrade bewusst einsetzen (Prinzip 4) | Warning für offene Entscheidungen schafft abgestufte Validierung |
 | 2026-05-08 | Metadaten als Tripel statt Kommentare (Prinzip 5) | Kommentare sind für Maschinen unsichtbar; Tripel sind abfragbar |
 | 2026-05-08 | Personen als foaf:Person-Ressourcen (Prinzip 6) | Strings sind tote Enden im Graph; URIs ermöglichen Navigation und Abfragen |
+| 2026-05-08 | Vollständige Prefix-Deklarationen pro Datei (Prinzip 7) | Dateien werden einzeln oder in beliebiger Kombination geladen; fehlende Prefixe führen zu Parse-Fehlern die erst zur Laufzeit sichtbar werden |

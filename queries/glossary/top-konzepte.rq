@@ -1,0 +1,18 @@
+# Wurzel-Konzepte: Begriffe ohne übergeordnetes Konzept (oberste Ebene)
+#
+# Datei: graph/glossary.ttl
+# Ausführen:
+#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
+#     --file /workspace/graph/glossary.ttl \
+#     --query /workspace/queries/glossary/top-konzepte.rq
+
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?konzept ?label ?definition
+WHERE {
+  ?konzept a skos:Concept ;
+           skos:prefLabel ?label .
+  OPTIONAL { ?konzept skos:definition ?definition . }
+  FILTER NOT EXISTS { ?konzept skos:broader ?eltern }
+}
+ORDER BY ?label

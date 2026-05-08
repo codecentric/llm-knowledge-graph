@@ -1,0 +1,17 @@
+# Konzept-Hierarchie: welche Begriffe sind wem übergeordnet?
+#
+# Datei: graph/glossary.ttl
+# Ausführen:
+#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
+#     --file /workspace/graph/glossary.ttl \
+#     --query /workspace/queries/glossary/hierarchie.rq
+
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?kindLabel ?elternLabel
+WHERE {
+  ?kind skos:broader ?eltern ;
+        skos:prefLabel ?kindLabel .
+  ?eltern skos:prefLabel ?elternLabel .
+}
+ORDER BY ?elternLabel ?kindLabel

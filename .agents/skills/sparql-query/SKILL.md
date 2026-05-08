@@ -16,15 +16,19 @@ Einmalig ausführen, bevor der Skill erstmals genutzt wird:
 cd /workspace/.agents/skills/sparql-query && npm install
 ```
 
-## Primärer Knowledge Graph
+## Knowledge Graph im Depot
+
+Alle RDF-Dateien liegen unter `graph/`:
 
 ```
-/workspace/glossary.ttl   ← SKOS/OWL-Glossar dieses Depots
+graph/glossary.ttl          ← SKOS/OWL-Fachglossar
+graph/versand.ttl           ← Versandlogik, Ländersperren, offene Punkte
+graph/personen/*.ttl        ← Stakeholder, Entscheidungen, offene Fragen
 ```
 
-Weitere `.ttl`-Dateien im Depot findest du mit:
+Alle TTL-Dateien dynamisch ermitteln:
 ```bash
-find /workspace -name "*.ttl" -o -name "*.rdf" -o -name "*.n3" | grep -v node_modules
+find /workspace/graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
 ```
 
 ---
@@ -43,7 +47,7 @@ cd /workspace/.agents/skills/sparql-query && npm install
 
 ```bash
 node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/glossary.ttl \
+  --file /workspace/graph/glossary.ttl \
   --sparql "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             SELECT ?c ?label WHERE { ?c a skos:Concept ; skos:prefLabel ?label }
             ORDER BY ?label LIMIT 20"
@@ -53,15 +57,15 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 
 ```bash
 node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/glossary.ttl \
-  --query /workspace/.agents/skills/sparql-query/queries/all-concepts.rq
+  --file /workspace/graph/glossary.ttl \
+  --query /workspace/queries/glossary/alle-konzepte.rq
 ```
 
 **Mit explizitem Limit (Sicherheitskappung, nur für SELECT ohne eigenes LIMIT):**
 
 ```bash
 node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/glossary.ttl \
+  --file /workspace/graph/glossary.ttl \
   --sparql "SELECT ?s ?p ?o WHERE { ?s ?p ?o }" \
   --limit 50
 ```
@@ -70,7 +74,7 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 
 ```bash
 node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/glossary.ttl \
+  --file /workspace/graph/glossary.ttl \
   --sparql "ASK { <https://shop.example.org/glossary#Checkout> a <http://www.w3.org/2004/02/skos/core#Concept> }"
 ```
 
@@ -78,7 +82,7 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 
 ```bash
 node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/glossary.ttl \
+  --file /workspace/graph/glossary.ttl \
   --sparql "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             CONSTRUCT { ?s skos:prefLabel ?l ; skos:broader ?b }
             WHERE { ?s a skos:Concept ; skos:prefLabel ?l . OPTIONAL { ?s skos:broader ?b } }"
@@ -88,22 +92,66 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 
 ```bash
 node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/glossary.ttl \
-  --query /workspace/.agents/skills/sparql-query/queries/all-concepts.rq \
+  --file /workspace/graph/glossary.ttl \
+  --query /workspace/queries/glossary/alle-konzepte.rq \
   --format json
+```
+
+**Mehrere Dateien gleichzeitig (z. B. alle Personen-TTLs):**
+
+```bash
+node /workspace/.agents/skills/sparql-query/scripts/query.js \
+  --file /workspace/graph/personen/thomas.ttl \
+  --file /workspace/graph/personen/sarah.ttl \
+  --file /workspace/graph/personen/julia.ttl \
+  --file /workspace/graph/personen/lena.ttl \
+  --file /workspace/graph/personen/marco.ttl \
+  --query /workspace/queries/personen/alle-stakeholder.rq
 ```
 
 ---
 
 ## Vorgefertigte Abfragen
 
+Domainspezifische Abfragen liegen in `queries/` im Workspace-Root,
+geordnet nach Fachmodul. Jede Datei enthält den passenden Ausführungsbefehl
+als Kommentar im Header.
+
+### `queries/glossary/` – Fachglossar (`graph/glossary.ttl`)
+
 | Datei | Inhalt |
 |-------|--------|
-| `queries/all-concepts.rq`      | Alle SKOS-Konzepte mit Label und Definition |
+| `alle-konzepte.rq`  | Alle SKOS-Konzepte mit Label und Definition |
+| `hierarchie.rq`     | Konzept-Hierarchie (broader/narrower) |
+| `top-konzepte.rq`   | Wurzel-Konzepte ohne übergeordneten Begriff |
+
+### `queries/versand/` – Versandlogik (`graph/versand.ttl`)
+
+| Datei | Inhalt |
+|-------|--------|
+| `alle-versandpartner.rq`              | Alle Partner mit Lieferzeiten und Sperrgut-Flag |
+| `lieferlaender-pro-partner.rq`        | Welcher Partner liefert in welche Länder |
+| `kostenlos-versand-schwellenwerte.rq` | Kostenlos-Versand-Schwellenwerte pro Land |
+| `laendersperren.rq`                   | Ländersperren nach Kategorie und Land |
+| `offene-punkte.rq`                    | Ungeklärte Fachentscheidungen im Versandmodul |
+
+### `queries/personen/` – Stakeholder (alle `graph/personen/*.ttl`)
+
+| Datei | Inhalt |
+|-------|--------|
+| `alle-stakeholder.rq`           | Alle Personen mit Rolle und Beschreibung |
+| `entscheidungen-pro-person.rq`  | Wer hat welche Entscheidung getroffen? |
+| `offene-fragen.rq`              | Offene Fragen mit verantwortlicher Person |
+
+### Generische SKOS-Abfragen (im Skill, für neue Graphen)
+
+| Datei | Inhalt |
+|-------|--------|
+| `queries/all-concepts.rq`      | Alle SKOS-Konzepte (generisch, kein Domain-Prefix) |
 | `queries/broader-narrower.rq`  | Übergeordnete/untergeordnete Konzept-Hierarchie |
 | `queries/related-concepts.rq`  | `skos:related`-Beziehungen |
 | `queries/top-concepts.rq`      | Konzepte ohne übergeordnetes Konzept (Wurzeln) |
-| `queries/search-by-label.rq`   | Substring-Suche im Label (anpassen: Suchbegriff) |
+| `queries/search-by-label.rq`   | Substring-Suche im Label (Suchbegriff anpassen) |
 
 ---
 
@@ -120,18 +168,45 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 
 ---
 
-## Präfixe im Depot-Glossar
+## Präfixe im Depot
 
 ```sparql
-PREFIX :     <https://shop.example.org/glossary#>
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX owl:  <http://www.w3.org/2002/07/owl#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX dct:  <http://purl.org/dc/terms/>
-PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+PREFIX :        <https://shop.example.org/glossary#>
+PREFIX versand: <https://shop.example.org/versand#>
+PREFIX person:  <https://shop.example.org/personen#>
+PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct:     <http://purl.org/dc/terms/>
+PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+PREFIX schema:  <https://schema.org/>
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
 ```
 
 Für weitere SPARQL-Muster → [references/sparql-cheatsheet.md](references/sparql-cheatsheet.md)
+
+---
+
+## Validierung – TTL-Syntax und SPARQL-Queries prüfen
+
+Nur die tatsächlich geänderten Dateien übergeben (sehr schnell, ~150ms):
+
+```bash
+cd /workspace && node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl
+cd /workspace && node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl queries/versand/laendersperren.rq
+```
+
+Alle Dateien auf einmal (wenn viele Dateien geändert wurden):
+
+```bash
+cd /workspace && npm run validate
+```
+
+Das Skript prüft:
+- **Turtle-Syntax** von `.ttl`-Dateien (via `rdf-parse`, in-process, parallel)
+- **SPARQL-Syntax** von `.rq`-Dateien (via `sparqljs`, in-process)
+
+Bei Fehlern: Exit-Code 1, Ausgabe zeigt betroffene Datei und Fehlermeldung.
 
 ---
 

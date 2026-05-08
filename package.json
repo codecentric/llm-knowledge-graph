@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "validate": "node .agents/skills/sparql-query/scripts/validate.js"
+  },
+  "dependencies": {
+    "@comunica/query-sparql-file": "^5.2.2"
+  }
+}

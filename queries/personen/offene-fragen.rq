@@ -1,0 +1,29 @@
+# Alle offenen Fragen / ungeklärten Punkte mit verantwortlicher Person
+#
+# Ausführen:
+#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
+#     --file /workspace/graph/personen/thomas.ttl \
+#     --file /workspace/graph/personen/sarah.ttl \
+#     --file /workspace/graph/personen/julia.ttl \
+#     --file /workspace/graph/personen/lena.ttl \
+#     --file /workspace/graph/personen/marco.ttl \
+#     --file /workspace/graph/personen/_vocab.ttl \
+#     --query /workspace/queries/personen/offene-fragen.rq
+
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+PREFIX person: <https://shop.example.org/personen#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+
+SELECT ?frageLabel ?beschreibung ?verantwortlich ?beantwortet
+WHERE {
+  ?frage a person:OffeneFrage ;
+         rdfs:label ?frageLabel .
+  OPTIONAL { ?frage rdfs:comment ?beschreibung . }
+  OPTIONAL {
+    ?p person:hatInitiiert ?frage ;
+       rdfs:label ?verantwortlich .
+  }
+  OPTIONAL { ?frage person:beantwortetDurch ?beantwortet . }
+}
+ORDER BY ?frageLabel

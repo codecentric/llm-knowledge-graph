@@ -58,7 +58,7 @@ const pad = (s, w) => String(s ?? "").padEnd(w);
 // ─── CLI ──────────────────────────────────────────────────────────────────────
 
 const argv = minimist(process.argv.slice(2), {
-  string:  ["file", "sparql", "query", "format"],
+  string:  ["sparql", "query", "format"],
   number:  ["limit"],
   boolean: ["help"],
   default: { format: "table" },
@@ -67,16 +67,23 @@ const argv = minimist(process.argv.slice(2), {
 
 if (argv.help) { usage(); process.exit(0); }
 
-if (!argv.file) {
+// --file kann einmal oder mehrfach angegeben werden
+const fileArgs = argv.file
+  ? (Array.isArray(argv.file) ? argv.file : [argv.file])
+  : [];
+
+if (fileArgs.length === 0) {
   console.error("Error: --file is required.\n");
   usage();
   process.exit(1);
 }
 
-const ttlPath = path.resolve(argv.file);
-if (!fs.existsSync(ttlPath)) {
-  console.error(`Error: file not found: ${ttlPath}`);
-  process.exit(1);
+for (const f of fileArgs) {
+  const resolved = path.resolve(f);
+  if (!fs.existsSync(resolved)) {
+    console.error(`Error: file not found: ${resolved}`);
+    process.exit(1);
+  }
 }
 
 let sparql = "";
@@ -103,8 +110,8 @@ if (argv.limit && /^\s*(PREFIX[^]*?\s+)?SELECT/i.test(sparql) && !/\bLIMIT\s+\d+
 // ─── Engine ───────────────────────────────────────────────────────────────────
 
 const engine  = new QueryEngine();
-const source  = { type: "file", value: `file://${ttlPath}` };
-const context = { sources: [source] };
+const sources = fileArgs.map(f => ({ type: "file", value: `file://${path.resolve(f)}` }));
+const context = { sources };
 
 (async () => {
   try {

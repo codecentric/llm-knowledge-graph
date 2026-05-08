@@ -1,0 +1,21 @@
+# Alle offenen Punkte im Versandmodul (ungeklärte Fachentscheidungen)
+#
+# Datei: graph/versand.ttl
+# Ausführen:
+#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
+#     --file /workspace/graph/versand.ttl \
+#     --query /workspace/queries/versand/offene-punkte.rq
+
+PREFIX versand: <https://shop.example.org/versand#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct:     <http://purl.org/dc/terms/>
+
+SELECT ?label ?beschreibung ?status ?erstellt
+WHERE {
+  ?punkt a versand:OffenerPunkt ;
+         rdfs:label ?label .
+  OPTIONAL { ?punkt rdfs:comment ?beschreibung . }
+  OPTIONAL { ?punkt versand:status ?status . }
+  OPTIONAL { ?punkt dct:created ?erstellt . }
+}
+ORDER BY ?erstellt

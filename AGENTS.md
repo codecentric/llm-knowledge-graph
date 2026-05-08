@@ -60,6 +60,23 @@ PREFIX schema:  <https://schema.org/>
 
 ---
 
+## Validierung nach jeder Änderung am Graph
+
+**Nach jeder Änderung an `.ttl`- oder `.rq`-Dateien** muss validiert werden.
+Nur die tatsächlich geänderten Dateien übergeben:
+
+```bash
+# Eine oder mehrere konkrete Dateien prüfen (bevorzugt):
+cd /workspace && node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl queries/versand/laendersperren.rq
+
+# Alle Dateien prüfen (nur wenn viele Dateien auf einmal geändert wurden):
+cd /workspace && npm run validate
+```
+
+Bei Exit-Code 1 den Fehler beheben, bevor die Antwort an den Nutzer geht.
+
+---
+
 ## Workflow für jede inhaltliche Nutzerfrage
 
 1. **Alle TTL-Dateien ermitteln:** `find /workspace/graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"`

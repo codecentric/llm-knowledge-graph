@@ -25,7 +25,7 @@ person:Thomas a foaf:Person, owl:NamedIndividual ;
 
 person:Entscheidung_PayPal_Geo a person:Entscheidung ;
     rdfs:label      "Entscheidung: PayPal nur EU + UK + Schweiz"@de ;
-    dct:description "PayPal-Gebühren außerhalb EU zu hoch, nicht rentabel. Zitat Thomas: „PayPal-Gebühren außerhalb EU zu hoch, nicht rentabel.""@de ;
+    dct:description "PayPal-Gebühren außerhalb EU zu hoch, nicht rentabel. Zitat Thomas: 'PayPal-Gebühren außerhalb EU zu hoch, nicht rentabel.'"@de ;
     dct:date        "2024-03-05"^^xsd:date ;
     dct:source      <inputs/meeting-checkout-versand.md> .
 

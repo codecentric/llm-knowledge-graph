@@ -1,0 +1,21 @@
+# Alle Versandpartner mit Lieferzeiten und Sperrgut-Flag
+#
+# Datei: graph/versand.ttl
+# Ausführen:
+#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
+#     --file /workspace/graph/versand.ttl \
+#     --query /workspace/queries/versand/alle-versandpartner.rq
+
+PREFIX versand: <https://shop.example.org/versand#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX :        <https://shop.example.org/glossary#>
+
+SELECT ?partner ?name ?minTage ?maxTage ?nurSperrgut
+WHERE {
+  ?partner a :Versandpartner ;
+           rdfs:label ?name .
+  OPTIONAL { ?partner versand:lieferzeitMin ?minTage . }
+  OPTIONAL { ?partner versand:lieferzeitMax ?maxTage . }
+  OPTIONAL { ?partner versand:nurFuerSperrgut ?nurSperrgut . }
+}
+ORDER BY ?name

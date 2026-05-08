@@ -1,0 +1,17 @@
+# Alle SKOS-Konzepte im Fachglossar mit Label und Definition
+#
+# Datei: graph/glossary.ttl
+# Ausführen:
+#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
+#     --file /workspace/graph/glossary.ttl \
+#     --query /workspace/queries/glossary/alle-konzepte.rq
+
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?konzept ?label ?definition
+WHERE {
+  ?konzept a skos:Concept ;
+           skos:prefLabel ?label .
+  OPTIONAL { ?konzept skos:definition ?definition . }
+}
+ORDER BY ?label
