@@ -94,6 +94,12 @@ SELECT ?s ?p ?o WHERE {
 > **Merkregel:** Erst vorhandene Queries prüfen, dann den Graph nach seiner eigenen Struktur fragen,
 > dann entlang dieser Struktur navigieren.
 
+> **⚠️ Keine Schlussfolgerungen als Graphfakten ausgeben.**
+> Jede inhaltliche Aussage muss durch einen konkreten abgefragten Triple gedeckt sein.
+> Zusammenhänge, die sich nur aus Textdefinitionen oder LLM-Weltwissen ergeben, sind explizit als
+> *"Interpretation – nicht im Graph modelliert"* zu kennzeichnen. Niemals SPARQL-Ergebnisse und
+> LLM-Schlussfolgerungen vermischen ohne dies kenntlich zu machen.
+
 ---
 
 ## Workflow

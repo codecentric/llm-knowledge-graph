@@ -13,6 +13,11 @@ Fachthemen – gilt immer:
 
 Niemals aus dem Gedächtnis/Trainingsdaten raten. Der Graph ist die Wahrheitsquelle.
 
+> ⚠️ **Keine Schlussfolgerungen als Graphfakten ausgeben.**
+> Jede Aussage über Zusammenhänge muss durch einen konkreten Triple im Graphen belegt sein.
+> Inhaltliche Interpretationen aus Textdefinitionen oder LLM-Weltwissen sind **explizit als Interpretation** zu kennzeichnen –
+> niemals als Tatsache aus dem Graphen darstellen.
+
 ---
 
 ## TTL-Dateien im Workspace
@@ -83,7 +88,10 @@ Bei Exit-Code 1 den Fehler beheben, bevor die Antwort an den Nutzer geht.
 2. **Alle TTL-Dateien ermitteln:** `find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"`
 3. **Vorhandene Queries prüfen:** `find queries -name "*.rq"` – passende `.rq`-Datei direkt ausführen
 4. **SPARQL-Abfrage semantisch formulieren** (Typen und Instanzen, kein Textfilter auf URIs)
-5. **Ergebnis in natürlicher Sprache erklären** – mit Hinweis auf offene Punkte/Unsicherheiten aus dem Graphen
+5. **Triple-Verifikation:** Jede inhaltliche Aussage in der Antwort muss durch einen konkreten abgefragten Triple gedeckt sein. Schlussfolgerungen, die nur aus Textdefinitionen oder LLM-Weltwissen stammen, explizit als *Interpretation (nicht im Graph modelliert)* kennzeichnen.
+6. **Ergebnis in natürlicher Sprache erklären** – mit klarer Trennung zwischen:
+   - ✅ *Im Graph modelliert:* direkt durch Tripel belegte Aussagen
+   - 💡 *Interpretation:* plausible Schlussfolgerungen, die **nicht** als Tripel im Graph existieren
 
 ---
 
