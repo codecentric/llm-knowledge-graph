@@ -1,0 +1,14 @@
+kategorie_id,name,parent_kategorie,typ,versandpflichtig,digitale_lieferung,notiz
+CAT-01,Elektronik,,physisch,ja,nein,
+CAT-02,Smartphones,CAT-01,physisch,ja,nein,
+CAT-03,Laptops,CAT-01,physisch,ja,nein,
+CAT-04,Software,,,nein,ja,Typ fehlt – unklar ob eigenständige Kategorie oder unter Elektronik
+CAT-05,E-Books,,digital,nein,ja,
+CAT-06,Gaming,CAT-01,physisch,ja,nein,Konsolen und Zubehör
+CAT-07,Gaming Downloads,CAT-06,digital,nein,ja,Überschneidung mit CAT-04 prüfen
+CAT-08,Kleidung,,physisch,ja,nein,
+CAT-09,Schuhe,CAT-08,physisch,ja,nein,
+CAT-10,Accessoires,CAT-08,physisch,ja,nein,Schmuck und Taschen
+CAT-11,Haushalt,,physisch,ja,nein,
+CAT-12,Möbel,CAT-11,physisch,ja,nein,Sperrgut-Versand – gesonderte Versandregeln nötig
+CAT-13,Lebensmittel,,physisch,ja,nein,Kühlpflichtige Artikel als Sonderfall noch offen

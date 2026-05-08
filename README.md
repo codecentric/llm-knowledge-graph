@@ -75,9 +75,34 @@ Das LLM muss **nicht mehr wissen** – es muss nur noch **fragen und erklären**
 ```
 .
 ├── README.md
+├── inputs/                # Rohdaten, die als Basis für die Graphgenerierung dienen
+│   └── ...                #   freie Struktur – Unterordner, Dateien, wie es passt
 ├── ontology/              # RDF-Ontologie der Fachdomäne (Turtle-Format)
 └── queries/               # Beispielabfragen (SPARQL)
 ```
+
+### `inputs/` – Woher kommt das Wissen?
+
+Der Knowledge Graph entsteht nicht aus dem Nichts. Die Grundlage bilden unstrukturierte oder halbstrukturierte Rohdaten, wie sie im Projektalltag anfallen – etwa Meeting-Protokolle, CSV-Exporte aus Jira, Notion oder ERP-Systemen, Freitext-Notizen oder Anforderungsschnipsel.
+
+Die interne Struktur von `inputs/` ist **bewusst freigelassen**. Unterordner, Dateinamen und Formate können je nach Projekt und Domäne frei gewählt werden. Einzige Anforderung: die Dateien müssen für den Extraktionsschritt lesbar sein.
+
+Diese Dokumente werden **nicht direkt** in den Graph übernommen. Stattdessen dienen sie als Input für einen LLM-gestützten Extraktionsschritt, der relevante Entitäten, Beziehungen und Regeln identifiziert und in RDF-Tripel überführt:
+
+```
+Rohdokument (inputs/)
+       │
+       ▼
+  LLM (Extraktor)
+       │  erkennt Entitäten, Beziehungen, Regeln und Widersprüche
+       ▼
+  RDF-Tripel (ontology/)
+       │
+       ▼
+  Knowledge Graph – abfragbar via SPARQL (queries/)
+```
+
+Die Rohdokumente bleiben im Repository erhalten, um die **Herkunft jedes Graphknotens nachvollziehbar** zu machen – Quelldokument und Extraktionszeitpunkt können als Metadaten direkt am Tripel hinterlegt werden.
 
 ---
 
