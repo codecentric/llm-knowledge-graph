@@ -56,6 +56,9 @@
     #detail .tag-list { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .5rem; }
     #detail .empty-msg { color: #bbb; font-size: .85rem; margin: 0; }
 
+    /* open-question nodes */
+    .leg-dot-warn { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; background: #f59e0b; box-shadow: 0 0 0 2px #fde68a; }
+
     /* legend */
     #legend {
       position: absolute; bottom: 12px; left: 12px;
@@ -146,6 +149,7 @@
 
     <div id="legend">
       <div class="leg-row"><span class="leg-dot" style="background:#4f6ef7;"></span> Konzept-Knoten</div>
+      <div class="leg-row"><span class="leg-dot-warn"></span> Offene Frage(n)</div>
       <div class="leg-row">
         <span class="leg-line" style="border-top:2.5px solid #e07b54;"></span>
         <span>skos:broader</span>
@@ -171,6 +175,35 @@ async function fetchTtl(path) {
   if (!res.ok) throw new Error(`Konnte ${path} nicht laden (HTTP ${res.status})`);
   return res.text();
 }
+
+// ─── SPARQL: Konzepte mit offenen Fragen (via versand:betrifft) ─────────
+const SPARQL_OPEN_QUESTIONS = `
+  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+  PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+
+  SELECT DISTINCT ?op ?concept ?opLabel ?opComment WHERE {
+    ?op a versand:OffenerPunkt ;
+        versand:betrifft ?concept ;
+        rdfs:label       ?opLabel .
+    OPTIONAL { ?op rdfs:comment ?opComment }
+  }
+`;
+
+// ─── SPARQL: Glossar-Definitionen mit ungeklärten Texten ──────────────────
+const SPARQL_OPEN_DEFS = `
+  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  SELECT ?concept ?label ?d WHERE {
+    ?concept a skos:Concept ; skos:prefLabel ?label ; skos:definition ?d .
+    FILTER(LANG(?label) = "de" || LANG(?label) = "")
+    FILTER (
+      CONTAINS(LCASE(STR(?d)), 'ungekl') ||
+      CONTAINS(LCASE(STR(?d)), 'noch offen') ||
+      CONTAINS(LCASE(STR(?d)), 'sonderfall noch') ||
+      CONTAINS(LCASE(STR(?d)), 'noch nicht')
+    )
+  }
+`;
 
 // ─── SPARQL: Alle Kanten (broader + related) ─────────────────────────────
 const SPARQL_EDGES = `
@@ -210,10 +243,18 @@ const titleEl     = document.getElementById('page-title');
 
 let cy;
 let globalStore;
+let openQuestionMap = new Map();  // IRI → [{label, comment}]
 
 // ─── Hilfsfunktionen ──────────────────────────────────────────────────────
 function shortIri(iri) { return iri.split(/[/#]/).pop() || iri; }
 function escHtml(s)    { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function slugify(str) {
+  return String(str)
+    .toLowerCase()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 function showError(msg) {
   statusEl.innerHTML = `
     <sl-alert variant="danger" open style="max-width:560px;margin:1rem;text-align:left;">
@@ -226,14 +267,18 @@ function showError(msg) {
 async function main() {
   await init();
 
-  // TTL extern laden – store.load() erwartet: (data, mimeType, baseIri)
-  const ttl = await fetchTtl('../graph/glossary.ttl');
+  // Beide TTL-Dateien laden: Glossar + Versand (für offene Fragen)
+  const [ttlGlossary, ttlVersand] = await Promise.all([
+    fetchTtl('../graph/glossary.ttl'),
+    fetchTtl('../graph/versand.ttl'),
+  ]);
 
   const store = new Store();
   globalStore = store;
 
   try {
-    store.load(ttl, 'text/turtle', 'https://shop.example.org/glossary#');
+    store.load(ttlGlossary, 'text/turtle', 'https://shop.example.org/glossary#');
+    store.load(ttlVersand,  'text/turtle', 'https://shop.example.org/versand#');
   } catch (e) { showError('TTL Parse-Fehler: ' + e.message); return; }
 
   // Titel aus Graph ermitteln
@@ -248,15 +293,49 @@ async function main() {
     for (const r of tq) { titleEl.textContent = r.get('t').value; break; }
   } catch (_) {}
 
+  // Offene Fragen: Konzept-IRIs sammeln (via versand:betrifft + Definition-Keywords)
+  try {
+    for (const r of store.query(SPARQL_OPEN_QUESTIONS)) {
+      const iri = r.get('concept')?.value ?? '';
+      if (!iri) continue;
+      if (!openQuestionMap.has(iri)) openQuestionMap.set(iri, []);
+      const opUri = r.get('op')?.value ?? '';
+      openQuestionMap.get(iri).push({
+        label:    r.get('opLabel')?.value   ?? '?',
+        comment:  r.get('opComment')?.value ?? '',
+        anchorId: 'op-' + slugify(shortIri(opUri)),
+        isGlossar: false,
+      });
+    }
+  } catch (_) {}
+  try {
+    for (const r of store.query(SPARQL_OPEN_DEFS)) {
+      const iri   = r.get('concept')?.value ?? '';
+      const label = r.get('label')?.value   ?? '';
+      const def   = r.get('d')?.value       ?? '';
+      if (!iri) continue;
+      if (!openQuestionMap.has(iri)) {
+        // Glossar-Items: kein expliziter OffenerPunkt, aber ungeklärte Definition
+        openQuestionMap.set(iri, [{
+          label:    'Ungeklärte Definition',
+          comment:  def,
+          anchorId: 'op-' + slugify(label),
+          isGlossar: true,
+        }]);
+      }
+    }
+  } catch (_) {}
+
   // Kanten laden
   let rows;
   try { rows = [...store.query(SPARQL_EDGES)]; }
   catch (e) { showError('SPARQL-Fehler: ' + e.message); return; }
 
-  const { nodes, edges } = buildElements(rows);
+  const { nodes, edges } = buildElements(rows, openQuestionMap);
 
   nodeCountEl.textContent = nodes.length + ' Konzepte';
   edgeCountEl.textContent = edges.length + ' Relationen';
+  updateOpenQBadge(openQuestionMap.size);
 
   // Cytoscape initialisieren
   cy = cytoscape({
@@ -276,7 +355,7 @@ async function main() {
 }
 
 // ─── Graphelemente bauen ──────────────────────────────────────────────────
-function buildElements(rows) {
+function buildElements(rows, openQuestionMap = new Map()) {
   const nodes = new Map();
   const edges  = [];
   const seen   = new Set();
@@ -288,8 +367,8 @@ function buildElements(rows) {
     const tgtLbl = row.get('targetLabel')?.value ?? shortIri(tgt);
     const rel    = row.get('relType')?.value     ?? '';
 
-    if (src) nodes.set(src, { data: { id: src, label: srcLbl } });
-    if (tgt) nodes.set(tgt, { data: { id: tgt, label: tgtLbl } });
+    if (src) nodes.set(src, { data: { id: src, label: srcLbl, hasOpenQ: openQuestionMap.has(src) ? 1 : 0 } });
+    if (tgt) nodes.set(tgt, { data: { id: tgt, label: tgtLbl, hasOpenQ: openQuestionMap.has(tgt) ? 1 : 0 } });
 
     if (src && tgt) {
       const eid = rel === 'related'
@@ -318,14 +397,31 @@ function cyStyle() {
         'text-wrap': 'wrap', 'text-max-width': '130px',
         'border-width': 0,
     }},
+    // Knoten mit offenen Fragen: Amber-Färbung + gepunkteter Rand + ⚠-Suffix im Label
+    { selector: 'node[hasOpenQ = 1]', style: {
+        'background-color': '#f59e0b',
+        'color': '#1a1a2e',
+        'border-width': 2.5,
+        'border-color': '#d97706',
+        'border-style': 'dashed',
+    }},
     { selector: 'node:selected', style: {
         'background-color': '#1e3fcc',
         'border-width': 2.5, 'border-color': '#fff',
         'shadow-blur': 12, 'shadow-color': '#4f6ef7', 'shadow-opacity': 0.5,
     }},
+    { selector: 'node[hasOpenQ = 1]:selected', style: {
+        'background-color': '#b45309',
+        'border-width': 2.5, 'border-color': '#fff',
+        'shadow-blur': 12, 'shadow-color': '#f59e0b', 'shadow-opacity': 0.6,
+    }},
     { selector: 'node.highlighted', style: {
         'background-color': '#1e3fcc',
         'border-width': 2.5, 'border-color': '#fff',
+    }},
+    { selector: 'node[hasOpenQ = 1].highlighted', style: {
+        'background-color': '#b45309',
+        'border-color': '#fff',
     }},
     { selector: 'node.faded', style: { 'opacity': 0.2 }},
     { selector: 'edge', style: {
@@ -409,6 +505,10 @@ async function showDetail(node) {
     relatedNeighbors.push(other.data('label'));
   });
 
+  // Offene Fragen für diesen Knoten (aus globalem openQuestionMap)
+  const openQuestions = openQuestionMap.get(iri) ?? [];
+  const hasOpenQ = node.data('hasOpenQ');
+
   const altBadges = [...new Set(altLabels)]
     .map(a => `<sl-badge variant="neutral" pill>${escHtml(a)}</sl-badge>`).join(' ');
 
@@ -420,10 +520,45 @@ async function showDetail(node) {
     ? relatedNeighbors.map(l => `<sl-badge variant="primary" pill>${escHtml(l)}</sl-badge>`).join(' ')
     : '<span style="color:#ccc;font-size:.8rem;">–</span>';
 
+  // Offene-Fragen-Block
+  let openQHtml = '';
+  if (hasOpenQ) {
+    const items = openQuestions.map(q => {
+      const anchor   = q.anchorId ?? ('op-' + slugify(shortIri(iri)));
+      const linkHref = `offene-fragen.html#${anchor}`;
+      return `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-left:3px solid #f59e0b;
+                    border-radius:5px;padding:.5rem .65rem;margin-bottom:.45rem;font-size:.82rem;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+            <strong style="color:#92400e;line-height:1.3;">${escHtml(q.label)}</strong>
+            <a href="${linkHref}" target="_blank"
+               style="flex-shrink:0;font-size:.72rem;font-weight:700;color:#d97706;
+                      text-decoration:none;border:1px solid #fcd34d;border-radius:4px;
+                      padding:.1rem .4rem;white-space:nowrap;"
+               title="In Offene-Fragen-App anzeigen">
+              → Details
+            </a>
+          </div>
+          ${q.comment ? `<div style="color:#78350f;margin-top:.3rem;line-height:1.5;">${escHtml(q.comment)}</div>` : ''}
+        </div>`;
+    });
+    openQHtml = `
+      <div class="section-head" style="color:#d97706;">⚠ Offene Frage(n)</div>
+      ${items.join('')}
+      <div style="text-align:right;margin-top:.1rem;">
+        <a href="offene-fragen.html" target="_blank"
+           style="font-size:.73rem;color:#92400e;text-decoration:none;opacity:.7;">
+          Alle offenen Punkte anzeigen ↗
+        </a>
+      </div>
+    `;
+  }
+
   detailEl.innerHTML = `
-    <h2>${escHtml(label)}</h2>
+    <h2>${escHtml(label)}${hasOpenQ ? ' <span title="Offene Fragen vorhanden" style="font-size:.8em;">⚠️</span>' : ''}</h2>
     <div class="iri">${escHtml(iri)}</div>
     ${def ? `<div class="def">${escHtml(def)}</div>` : ''}
+    ${openQHtml}
     ${altLabels.length ? `<div class="section-head">Synonyme</div><div class="tag-list">${altBadges}</div>` : ''}
     <div class="section-head">broader (Oberbegriff)</div>
     <div class="tag-list">${broaderList}</div>
@@ -466,6 +601,29 @@ function applyEdgeFilter() {
 document.getElementById('cb-broader').addEventListener('sl-change', applyEdgeFilter);
 document.getElementById('cb-related').addEventListener('sl-change', applyEdgeFilter);
 
+// ─── Toolbar: Offene Fragen filtern ─────────────────────────────────────
+const btnOpenQ = document.createElement('sl-button');
+btnOpenQ.size = 'small';
+btnOpenQ.id = 'btn-open-q';
+btnOpenQ.innerHTML = '<sl-icon slot="prefix" name="exclamation-triangle"></sl-icon> Offene Fragen';
+btnOpenQ.title = 'Nur Knoten mit offenen Fragen anzeigen';
+document.querySelector('.toolbar').insertBefore(btnOpenQ, document.querySelector('.toolbar .toolbar-sep'));
+
+let openQFilterActive = false;
+btnOpenQ.addEventListener('click', () => {
+  if (!cy) return;
+  openQFilterActive = !openQFilterActive;
+  btnOpenQ.variant = openQFilterActive ? 'warning' : 'default';
+  if (openQFilterActive) {
+    const openNodes = cy.nodes('[hasOpenQ = 1]');
+    const rest = cy.elements().not(openNodes);
+    rest.addClass('faded');
+    openNodes.removeClass('faded').addClass('highlighted');
+  } else {
+    cy.elements().removeClass('faded highlighted');
+  }
+});
+
 // ─── Suche / Highlight ────────────────────────────────────────────────────
 document.getElementById('search-input').addEventListener('sl-input', evt => {
   if (!cy) return;
@@ -480,6 +638,19 @@ document.getElementById('search-input').addEventListener('sl-input', evt => {
 document.getElementById('search-input').addEventListener('sl-clear', () => {
   cy?.elements().removeClass('faded highlighted');
 });
+
+// ─── Offene-Fragen-Badge in Header ──────────────────────────────────────
+function updateOpenQBadge(count) {
+  if (count === 0) return;
+  const badge = document.createElement('sl-badge');
+  badge.variant = 'warning';
+  badge.pill = true;
+  badge.innerHTML = `⚠ ${count} offene Fragen`;
+  badge.style.cursor = 'pointer';
+  badge.title = 'Klick: Nur Knoten mit offenen Fragen hervorheben';
+  badge.addEventListener('click', () => btnOpenQ.click());
+  document.querySelector('header .badges').appendChild(badge);
+}
 
 // ─── Start ────────────────────────────────────────────────────────────────
 main().catch(err => showError(err.message));

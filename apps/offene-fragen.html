@@ -304,6 +304,14 @@ function localName(uri) {
   return uri.replace(/.*[#\/]/, '');
 }
 
+function slugify(str) {
+  return String(str)
+    .toLowerCase()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function extractDeadline(text) {
   const m = text.match(/Deadline:\s*(\d{4}-\d{2}-\d{2})/i);
   return m ? m[1] : null;
@@ -324,7 +332,7 @@ function isOverdue(iso) {
 }
 
 // ── Card-Renderer ────────────────────────────────────────────────────────────
-function renderCard({ type, title, desc, affected, created, deadline, persons }) {
+function renderCard({ id, type, title, desc, affected, created, deadline, persons }) {
   const badgeLabel  = type === 'versand' ? '🚚 Versandlogik' : '📖 Glossar';
   const badgeClass  = type;
   const overdue     = isOverdue(deadline);
@@ -340,7 +348,7 @@ function renderCard({ type, title, desc, affected, created, deadline, persons })
   const personsHtml  = persons.length ? `<span class="meta-item">👤 ${escHtml(persons.join(', '))}</span>` : '';
 
   return `
-<div class="issue-card" data-type="${type}">
+<div class="issue-card" id="${escHtml(id)}" data-type="${type}">
   <div class="card-stripe stripe-${type}"></div>
   <div class="card-body">
     <div class="card-meta">
@@ -455,7 +463,8 @@ async function run() {
   if (opMap.size === 0) {
     gridV.innerHTML = '<div class="empty">Keine offenen Punkte gefunden.</div>';
   } else {
-    gridV.innerHTML = [...opMap.values()].map(op => renderCard({
+    gridV.innerHTML = [...opMap.entries()].map(([uri, op]) => renderCard({
+      id:       'op-' + slugify(localName(uri)),
       type:     'versand',
       title:    op.label,
       desc:     op.comment,
@@ -472,6 +481,7 @@ async function run() {
     gridG.innerHTML = '<div class="empty">Keine ungeklärten Definitionen gefunden.</div>';
   } else {
     gridG.innerHTML = glossItems.map(item => renderCard({
+      id:       'op-' + slugify(item.label),
       type:     'glossary',
       title:    item.label,
       desc:     item.definition,
@@ -502,7 +512,23 @@ window.applyFilter = function(btn) {
 };
 
 // ── Start ────────────────────────────────────────────────────────────────────
-run().catch(err => {
+// ── Hash-Navigation: Karte beim Öffnen per Anker hervorheben ───────────────
+function highlightFromHash() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+  const card = document.getElementById(hash);
+  if (!card) return;
+  requestAnimationFrame(() => {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.style.transition = 'box-shadow .25s, outline .25s';
+    card.style.outline = '3px solid #f59e0b';
+    card.style.boxShadow = '0 0 0 6px #fde68a';
+    setTimeout(() => { card.style.outline = ''; card.style.boxShadow = ''; }, 2600);
+  });
+}
+window.addEventListener('hashchange', highlightFromHash);
+
+run().then(() => highlightFromHash()).catch(err => {
   document.getElementById('loading').innerHTML =
     `<div class="error-box"><strong>Fehler:</strong> ${escHtml(err.message)}<br>
      <small>Bitte die Datei über einen Webserver öffnen (z.&nbsp;B. <code>npm run serve</code> im Workspace-Root).</small></div>`;
