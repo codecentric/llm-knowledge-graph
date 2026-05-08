@@ -75,12 +75,20 @@ Das LLM muss **nicht mehr wissen** – es muss nur noch **fragen und erklären**
 ```
 .
 ├── README.md
+├── AGENTS.md              # Instruktionen für den AI-Agenten (Graph-first-Prinzip)
 ├── apps/                  # Generierte HTML-Visualisierungen des Knowledge Graphs
+├── graph/                 # Alle RDF-Dateien des Knowledge Graphs
 ├── inputs/                # Rohdaten, die als Basis für die Graphgenerierung dienen
 │   └── ...                #   freie Struktur – Unterordner, Dateien, wie es passt
-├── ontology/              # RDF-Ontologie der Fachdomäne (Turtle-Format)
 └── queries/               # Beispielabfragen (SPARQL)
 ```
+
+### `graph/` – Der Knowledge Graph
+
+Alle RDF/Turtle-Dateien (`.ttl`) liegen zentral im Ordner `graph/`. Der Graph wächst
+dynamisch – neue Fachmodule werden als neue `.ttl`-Dateien in diesem Ordner abgelegt,
+ggf. in thematischen Unterordnern. Es gibt keine feste Dateiliste; der gesamte Inhalt
+von `graph/` bildet gemeinsam den Knowledge Graph der Domäne.
 
 ### `inputs/` – Woher kommt das Wissen?
 
@@ -97,7 +105,7 @@ Rohdokument (inputs/)
   LLM (Extraktor)
        │  erkennt Entitäten, Beziehungen, Regeln und Widersprüche
        ▼
-  RDF-Tripel (ontology/)
+  RDF-Tripel (graph/)
        │
        ▼
   Knowledge Graph – abfragbar via SPARQL (queries/)
