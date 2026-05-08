@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Versanddomäne – Shop Knowledge Graph</title>
+
+  <!-- Shoelace -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+
+  <!-- Cytoscape -->
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+
+  <style>
+    :root {
+      --brand-dark:   #0f172a;
+      --brand-mid:    #1e3a5f;
+      --brand-accent: #3b82f6;
+      --brand-light:  #eff6ff;
+      --sl-color-primary-600: #3b82f6;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: var(--sl-font-sans);
+      margin: 0;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-mid) 100%);
+      color: #fff;
+      padding: 1.1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header .icon-wrap {
+      width: 2.5rem; height: 2.5rem; border-radius: 10px;
+      background: rgba(255,255,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    header h1 { margin: 0; font-size: 1.35rem; font-weight: 700; flex: 1; }
+    header p  { margin: 0; font-size: .8rem; opacity: .7; }
+    #header-badges { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+    /* ── Loading overlay ─────────────────────────────────────── */
+    #loading-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 9999; color: #fff; gap: 1rem;
+    }
+    #loading-overlay p { margin: 0; font-size: .9rem; opacity: .8; }
+
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .main-tabs { background: #fff; }
+    .main-tabs::part(tabs) {
+      padding: 0 1.5rem;
+      border-bottom: 2px solid #e2e8f0;
+      background: #fff;
+      position: sticky; top: 0; z-index: 40;
+    }
+    .main-tabs::part(active-tab-indicator) { background: var(--brand-accent); }
+
+    sl-tab-panel { padding: 1.5rem 2rem; }
+
+    /* ── Section headers ─────────────────────────────────────── */
+    .section-head {
+      display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem;
+    }
+    .section-head h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+
+    /* ── Card grid ───────────────────────────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .info-card {
+      background: #fff; border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 1.1rem 1.25rem;
+      transition: transform .15s, box-shadow .15s;
+      cursor: default;
+    }
+    .info-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.09); }
+    .info-card h3    { margin: 0 0 .5rem; font-size: .95rem; font-weight: 600; display: flex; align-items: center; gap: .4rem; }
+    .info-card .meta { font-size: .78rem; color: #64748b; line-height: 1.6; }
+    .info-card .tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .7rem; }
+    .pill {
+      display: inline-flex; align-items: center; gap: .25rem;
+      font-size: .72rem; font-weight: 500;
+      padding: .2rem .6rem; border-radius: 99px;
+    }
+    .pill-blue   { background: #dbeafe; color: #1d4ed8; }
+    .pill-green  { background: #dcfce7; color: #16a34a; }
+    .pill-orange { background: #ffedd5; color: #c2410c; }
+    .pill-red    { background: #fee2e2; color: #dc2626; }
+    .pill-purple { background: #f3e8ff; color: #9333ea; }
+    .pill-gray   { background: #f1f5f9; color: #475569; }
+    .pill-yellow { background: #fef9c3; color: #a16207; }
+
+    /* ── Länder-Karte ─────────────────────────────────────────── */
+    .land-card { border-top: 4px solid var(--brand-accent); }
+    .land-card.hat-schwellenwert { border-top-color: #16a34a; }
+    .land-card.kein-schwellenwert { border-top-color: #94a3b8; }
+    .threshold-big {
+      font-size: 1.6rem; font-weight: 700; color: #16a34a;
+      margin: .4rem 0 .1rem;
+    }
+    .threshold-label { font-size: .72rem; color: #64748b; }
+
+    /* ── Partner-Karte ───────────────────────────────────────── */
+    .partner-card { border-left: 4px solid #8b5cf6; }
+    .lz-bar-wrap { margin: .5rem 0 .25rem; }
+    .lz-label { font-size: .72rem; color: #64748b; margin-bottom: .2rem; }
+    .lz-bar {
+      height: 8px; border-radius: 4px; background: #e2e8f0;
+      position: relative; overflow: hidden;
+    }
+    .lz-fill { height: 100%; background: #8b5cf6; border-radius: 4px; }
+
+    /* ── Sperre-Karte ────────────────────────────────────────── */
+    .sperre-card { border-left: 4px solid #ef4444; }
+
+    /* ── Regel-Karte ─────────────────────────────────────────── */
+    .regel-card { border-left: 4px solid #f59e0b; }
+    .regel-card .rule-text {
+      font-size: .78rem; color: #92400e; background: #fef3c7;
+      border-radius: 8px; padding: .5rem .7rem; margin-top: .6rem;
+      line-height: 1.5;
+    }
+
+    /* ── Offene-Punkte-Karte ──────────────────────────────────── */
+    .op-card { border-left: 4px solid #f97316; }
+
+    /* ── Graph ───────────────────────────────────────────────── */
+    #cy-panel { padding: 0; position: relative; }
+    #cy-panel::part(base) { height: calc(100vh - 110px); }
+    #cy { width: 100%; height: calc(100vh - 110px); display: block; }
+    #cy-init {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; background: #fff; z-index: 5;
+    }
+    .graph-toolbar {
+      position: absolute; top: .75rem; right: .75rem; z-index: 10;
+      display: flex; flex-direction: column; gap: .4rem;
+    }
+    .legend {
+      position: absolute; bottom: .75rem; left: .75rem; z-index: 10;
+      background: rgba(255,255,255,.93); border-radius: 10px;
+      border: 1px solid #e2e8f0; padding: .6rem .9rem; font-size: .72rem;
+    }
+    .legend h4 { margin: 0 0 .4rem; font-size: .75rem; }
+    .leg-item { display: flex; align-items: center; gap: .4rem; margin-bottom: .2rem; }
+    .leg-dot  { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .leg-line { width: 20px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-overlay">
+  <sl-spinner style="font-size:2.5rem;"></sl-spinner>
+  <p>Lade Knowledge Graph …</p>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="icon-wrap">📦</div>
+  <div>
+    <h1>Versanddomäne – Shop Knowledge Graph</h1>
+    <p>Versandpartner · Länder · Optionen · Sperren · SHACL-Regeln · Offene Punkte</p>
+  </div>
+  <div id="header-badges">
+    <sl-badge id="badge-partner" variant="primary" pill>…</sl-badge>
+    <sl-badge id="badge-laender" variant="success" pill>…</sl-badge>
+    <sl-badge id="badge-sperren" variant="danger"  pill>…</sl-badge>
+    <sl-badge id="badge-op"      variant="warning" pill>…</sl-badge>
+  </div>
+</header>
+
+<!-- Haupt-Tabs -->
+<sl-tab-group class="main-tabs" id="main-tabs">
+
+  <sl-tab slot="nav" panel="laender">🌍 Länder</sl-tab>
+  <sl-tab slot="nav" panel="partner">🚚 Versandpartner</sl-tab>
+  <sl-tab slot="nav" panel="optionen">📋 Versandoptionen</sl-tab>
+  <sl-tab slot="nav" panel="sperren">🚫 Ländersperren</sl-tab>
+  <sl-tab slot="nav" panel="regeln">⚖️ SHACL-Regeln</sl-tab>
+  <sl-tab slot="nav" panel="offene">⚠️ Offene Punkte</sl-tab>
+  <sl-tab slot="nav" panel="graph">🕸️ Graph</sl-tab>
+
+  <!-- ── Länder ─────────────────────────────────────────────── -->
+  <sl-tab-panel name="laender">
+    <div class="section-head">
+      <sl-icon name="globe2" style="font-size:1.3rem;color:var(--brand-accent);"></sl-icon>
+      <h2>Lieferländer &amp; Freiversand-Schwellenwerte</h2>
+    </div>
+    <div class="card-grid" id="grid-laender"></div>
+  </sl-tab-panel>
+
+  <!-- ── Partner ───────────────────────────────────────────── -->
+  <sl-tab-panel name="partner">
+    <div class="section-head">
+      <sl-icon name="truck" style="font-size:1.3rem;color:#8b5cf6;"></sl-icon>
+      <h2>Versandpartner</h2>
+    </div>
+    <div class="card-grid" id="grid-partner"></div>
+  </sl-tab-panel>
+
+  <!-- ── Optionen ──────────────────────────────────────────── -->
+  <sl-tab-panel name="optionen">
+    <div class="section-head">
+      <sl-icon name="list-check" style="font-size:1.3rem;color:#0ea5e9;"></sl-icon>
+      <h2>Versandoptionen</h2>
+    </div>
+    <div class="card-grid" id="grid-optionen"></div>
+  </sl-tab-panel>
+
+  <!-- ── Sperren ───────────────────────────────────────────── -->
+  <sl-tab-panel name="sperren">
+    <div class="section-head">
+      <sl-icon name="shield-exclamation" style="font-size:1.3rem;color:#ef4444;"></sl-icon>
+      <h2>Ländersperren &amp; Exportbeschränkungen</h2>
+    </div>
+    <div class="card-grid" id="grid-sperren"></div>
+  </sl-tab-panel>
+
+  <!-- ── SHACL-Regeln ──────────────────────────────────────── -->
+  <sl-tab-panel name="regeln">
+    <div class="section-head">
+      <sl-icon name="shield-check" style="font-size:1.3rem;color:#f59e0b;"></sl-icon>
+      <h2>Geschäftsregeln (SHACL Shapes)</h2>
+    </div>
+    <div class="card-grid" id="grid-regeln"></div>
+  </sl-tab-panel>
+
+  <!-- ── Offene Punkte ─────────────────────────────────────── -->
+  <sl-tab-panel name="offene">
+    <div class="section-head">
+      <sl-icon name="exclamation-triangle" style="font-size:1.3rem;color:#f97316;"></sl-icon>
+      <h2>Offene Punkte &amp; ausstehende Entscheidungen</h2>
+    </div>
+    <div class="card-grid" id="grid-op"></div>
+  </sl-tab-panel>
+
+  <!-- ── Graph ─────────────────────────────────────────────── -->
+  <sl-tab-panel name="graph" id="cy-panel">
+    <div id="cy-init">
+      <sl-spinner style="font-size:2rem;"></sl-spinner>
+      <p style="color:#94a3b8;margin-top:.5rem;">Graph wird geladen …</p>
+    </div>
+    <div id="cy"></div>
+
+    <div class="graph-toolbar">
+      <sl-button size="small" id="btn-fit" title="Einpassen">
+        <sl-icon name="arrows-fullscreen"></sl-icon>
+      </sl-button>
+      <sl-select id="layout-sel" size="small" value="cose" style="width:140px;">
+        <sl-option value="cose">CoSE</sl-option>
+        <sl-option value="breadthfirst">Hierarchie</sl-option>
+        <sl-option value="circle">Kreis</sl-option>
+        <sl-option value="concentric">Konzentrisch</sl-option>
+      </sl-select>
+    </div>
+
+    <div class="legend" id="cy-legend">
+      <h4>Legende</h4>
+      <!-- wird zur Laufzeit aus dem Store befüllt -->
+    </div>
+  </sl-tab-panel>
+
+</sl-tab-group>
+
+<!-- Detail Drawer -->
+<sl-drawer id="detail-drawer" label="Details" placement="end">
+  <div id="detail-body" style="font-size:.85rem;"></div>
+  <sl-button slot="footer" variant="primary"
+    onclick="document.getElementById('detail-drawer').hide()">Schließen</sl-button>
+</sl-drawer>
+
+<!-- ── Embedded TTL ──────────────────────────────────────────── -->
+<script type="module">
+import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
+
+// ─── TTL per fetch() laden (nie inline einbetten) ─────────────────────────
+async function fetchTtl(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`Konnte ${path} nicht laden (HTTP ${res.status})`);
+  return res.text();
+}
+
+// ─── SPARQL-Queries ────────────────────────────────────────────────────────
+
+const Q_LAENDER = `
+  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  PREFIX schema: <https://schema.org/>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  SELECT ?land ?label ?code ?schwelle ?hinweis WHERE {
+    ?land a versand:Land ;
+          rdfs:label ?label .
+    OPTIONAL { ?land schema:identifier ?code }
+    OPTIONAL { ?land versand:kostenlosAbWarenkorbwert ?schwelle }
+    OPTIONAL { ?land dct:description ?hinweis }
+    FILTER(LANG(?label) = "de" || LANG(?label) = "")
+  }
+  ORDER BY ?label
+`;
+
+const Q_PARTNER = `
+  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX : <https://shop.example.org/glossary#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  SELECT ?p ?label ?min ?max ?sperrgut ?hinweis
+         (GROUP_CONCAT(DISTINCT ?zielLabel; SEPARATOR="|") AS ?ziele)
+  WHERE {
+    ?p a :Versandpartner ;
+       rdfs:label ?label .
+    OPTIONAL { ?p versand:lieferzeitMin ?min }
+    OPTIONAL { ?p versand:lieferzeitMax ?max }
+    OPTIONAL { ?p versand:nurFuerSperrgut ?sperrgut }
+    OPTIONAL { ?p dct:description ?hinweis }
+    OPTIONAL {
+      ?p versand:liefertIn ?ziel .
+      ?ziel rdfs:label ?zielLabel .
+      FILTER(LANG(?zielLabel) = "de" || LANG(?zielLabel) = "")
+    }
+    FILTER(LANG(?label) = "de" || LANG(?label) = "")
+  }
+  GROUP BY ?p ?label ?min ?max ?sperrgut ?hinweis
+  ORDER BY ?label
+`;
+
+const Q_OPTIONEN = `
+  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX : <https://shop.example.org/glossary#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  SELECT ?opt ?label ?aufpreis ?express ?partnerLabel ?hinweis WHERE {
+    ?opt a :Versandoption ;
+         rdfs:label ?label .
+    OPTIONAL { ?opt versand:aufpreis ?aufpreis }
+    OPTIONAL { ?opt versand:istExpressOption ?express }
+    OPTIONAL { ?opt versand:verwendetPartner ?partner .
+               ?partner rdfs:label ?partnerLabel .
+               FILTER(LANG(?partnerLabel) = "de" || LANG(?partnerLabel) = "") }
+    OPTIONAL { ?opt dct:description ?hinweis }
+    FILTER(LANG(?label) = "de" || LANG(?label) = "")
+  }
+  ORDER BY DESC(?express) ?label
+`;
+
+const Q_SPERREN = `
+  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX : <https://shop.example.org/glossary#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  SELECT ?sp ?label ?grund ?sku ?details
+         (GROUP_CONCAT(DISTINCT ?katLabel; SEPARATOR="|") AS ?kats)
+         (GROUP_CONCAT(DISTINCT ?landLabel; SEPARATOR="|") AS ?laender)
+  WHERE {
+    ?sp a :Landerbeschrankung ;
+        rdfs:label ?label .
+    OPTIONAL { ?sp versand:sperrgrund ?grund }
+    OPTIONAL { ?sp versand:skuUeberschreibungMoeglich ?sku }
+    OPTIONAL { ?sp dct:description ?details }
+    OPTIONAL {
+      ?sp versand:gesperrteKategorie ?kat .
+      BIND(STRAFTER(STR(?kat), "#") AS ?katLabel)
+    }
+    OPTIONAL {
+      ?sp versand:gesperrtFuerLand ?land .
+      ?land rdfs:label ?landLabel .
+      FILTER(LANG(?landLabel) = "de" || LANG(?landLabel) = "")
+    }
+    FILTER(LANG(?label) = "de" || LANG(?label) = "")
+  }
+  GROUP BY ?sp ?label ?grund ?sku ?details
+  ORDER BY ?label
+`;
+
+const Q_REGELN = `
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  SELECT ?shape ?label ?comment ?severity WHERE {
+    ?shape a sh:NodeShape ;
+           rdfs:label ?label .
+    OPTIONAL { ?shape rdfs:comment ?comment }
+    OPTIONAL { ?shape sh:severity ?severity }
+    FILTER(LANG(?label) = "de" || LANG(?label) = "")
+  }
+  ORDER BY ?label
+`;
+
+const Q_OP = `
+  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  SELECT ?op ?label ?comment ?created ?status
+         (GROUP_CONCAT(DISTINCT ?betrifftLabel; SEPARATOR="|") AS ?betrifft)
+  WHERE {
+    ?op a versand:OffenerPunkt ;
+        rdfs:label ?label .
+    OPTIONAL { ?op rdfs:comment ?comment }
+    OPTIONAL { ?op dct:created ?created }
+    OPTIONAL { ?op versand:status ?status }
+    OPTIONAL {
+      ?op versand:betrifft ?ref .
+      BIND(STRAFTER(STR(?ref), "#") AS ?betrifftLabel)
+    }
+    FILTER(LANG(?label) = "de" || LANG(?label) = "")
+  }
+  GROUP BY ?op ?label ?comment ?created ?status
+  ORDER BY ?label
+`;
+
+// Graph-Query: alle deklarierten ObjectProperties im versand:-Namespace als Kanten –
+// neue Properties in der TTL erscheinen sofort im Graph, ohne Code-Änderung.
+const Q_GRAPH = `
+  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX owl: <http://www.w3.org/2002/07/owl#>
+  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  SELECT ?source ?sourceLabel ?sourceType ?rel ?edgeLabel ?target ?targetLabel ?targetType WHERE {
+    ?rel a owl:ObjectProperty .
+    FILTER(STRSTARTS(STR(?rel), "https://shop.example.org/versand#"))
+    ?source ?rel ?target .
+    FILTER(isIRI(?source) && isIRI(?target))
+    OPTIONAL { ?rel rdfs:label ?rl . FILTER(LANG(?rl) = "de" || LANG(?rl) = "") }
+    OPTIONAL { ?source rdfs:label ?lsrc . FILTER(LANG(?lsrc) = "de" || LANG(?lsrc) = "") }
+    OPTIONAL { ?target rdfs:label ?ltgt . FILTER(LANG(?ltgt) = "de" || LANG(?ltgt) = "") }
+    OPTIONAL { ?source rdf:type ?sourceType . FILTER(isIRI(?sourceType)) }
+    OPTIONAL { ?target rdf:type ?targetType . FILTER(isIRI(?targetType)) }
+    BIND(IF(BOUND(?lsrc), ?lsrc, STRAFTER(STR(?source), "#")) AS ?sourceLabel)
+    BIND(IF(BOUND(?ltgt), ?ltgt, STRAFTER(STR(?target), "#")) AS ?targetLabel)
+    BIND(IF(BOUND(?rl),   ?rl,   STRAFTER(STR(?rel),    "#")) AS ?edgeLabel)
+  }
+`;
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const v   = (row, key) => row.get(key)?.value ?? '';
+// Flagge per Unicode Regional Indicator – funktioniert für jeden ISO-3166-Alpha-2-Code.
+const flag = code => {
+  if (!code || code.length !== 2) return '🌍';
+  const base = 0x1F1E6 - 65;
+  return String.fromCodePoint(code.toUpperCase().charCodeAt(0) + base)
+       + String.fromCodePoint(code.toUpperCase().charCodeAt(1) + base);
+};
+
+// ─── Main ──────────────────────────────────────────────────────────────────
+async function main() {
+  await init();
+  const store = new Store();
+
+  const ttl = await fetchTtl('../graph/versand.ttl');
+  try {
+    store.load(ttl, 'text/turtle', 'https://shop.example.org/');
+  } catch(e) {
+    alert('TTL Parse-Fehler: ' + e.message);
+    return;
+  }
+
+  buildLaender(store);
+  buildPartner(store);
+  buildOptionen(store);
+  buildSperren(store);
+  buildRegeln(store);
+  buildOP(store);
+  setupGraph(store);
+
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
+// ─── Länder ────────────────────────────────────────────────────────────────
+function buildLaender(store) {
+  const rows = [...store.query(Q_LAENDER)];
+  document.getElementById('badge-laender').textContent = rows.length + ' Länder';
+  const grid = document.getElementById('grid-laender');
+
+  rows.forEach(row => {
+    const label   = v(row,'label');
+    const code    = v(row,'code');
+    const schwelle = v(row,'schwelle');
+    const hinweis  = v(row,'hinweis');
+    const hatSchwelle = schwelle !== '';
+
+    const div = document.createElement('div');
+    div.className = 'info-card land-card ' + (hatSchwelle ? 'hat-schwellenwert' : 'kein-schwellenwert');
+    div.innerHTML = `
+      <h3>${flag(code)} ${esc(label)} <span class="pill pill-gray" style="font-size:.65rem;">${esc(code)}</span></h3>
+      ${hatSchwelle
+        ? `<div class="threshold-big">${parseFloat(schwelle).toFixed(2).replace('.',',')} €</div>
+           <div class="threshold-label">Freiversand ab diesem Warenkorbwert</div>`
+        : `<div class="meta" style="color:#94a3b8;font-style:italic;">Kein Freiversand-Schwellenwert hinterlegt</div>`
+      }
+      ${hinweis ? `<div class="meta" style="margin-top:.6rem;padding:.4rem .6rem;background:#fef9c3;border-radius:6px;">⚠️ ${esc(hinweis)}</div>` : ''}
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ─── Partner ───────────────────────────────────────────────────────────────
+function buildPartner(store) {
+  const rows = [...store.query(Q_PARTNER)];
+  document.getElementById('badge-partner').textContent = rows.length + ' Partner';
+  const grid = document.getElementById('grid-partner');
+
+  rows.forEach(row => {
+    const label    = v(row,'label');
+    const min      = v(row,'min');
+    const max      = v(row,'max');
+    const sperrgut = v(row,'sperrgut') === 'true';
+    const hinweis  = v(row,'hinweis');
+    const ziele    = v(row,'ziele').split('|').filter(Boolean);
+
+    const maxDays = 5;
+    const barPct  = max ? Math.min(100, (parseInt(max)/maxDays)*100) : 0;
+
+    const div = document.createElement('div');
+    div.className = 'info-card partner-card';
+    div.innerHTML = `
+      <h3>🚚 ${esc(label)}</h3>
+      ${(min || max) ? `
+        <div class="lz-bar-wrap">
+          <div class="lz-label">Lieferzeit: ${min}–${max} Werktage</div>
+          <div class="lz-bar"><div class="lz-fill" style="width:${barPct}%"></div></div>
+        </div>` : ''}
+      <div class="tags">
+        ${sperrgut ? '<span class="pill pill-purple">🛋️ Nur Sperrgut</span>' : '<span class="pill pill-green">📦 Standardware</span>'}
+        ${ziele.map(z => `<span class="pill pill-blue">${esc(z)}</span>`).join('')}
+      </div>
+      ${hinweis ? `<div class="meta" style="margin-top:.6rem;padding:.4rem .6rem;background:#fef9c3;border-radius:6px;">⚠️ ${esc(hinweis)}</div>` : ''}
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ─── Optionen ──────────────────────────────────────────────────────────────
+function buildOptionen(store) {
+  const rows = [...store.query(Q_OPTIONEN)];
+  const grid = document.getElementById('grid-optionen');
+
+  rows.forEach(row => {
+    const label        = v(row,'label');
+    const aufpreis     = v(row,'aufpreis');
+    const express      = v(row,'express') === 'true';
+    const partnerLabel = v(row,'partnerLabel');
+    const hinweis      = v(row,'hinweis');
+
+    const preisText = aufpreis === '0' || aufpreis === '0.0' || aufpreis === '0.00'
+      ? '<span class="pill pill-green">Kostenlos</span>'
+      : `<span class="pill pill-orange">+${parseFloat(aufpreis).toFixed(2).replace('.',',')} €</span>`;
+
+    const div = document.createElement('div');
+    div.className = 'info-card';
+    div.style.borderLeft = '4px solid #0ea5e9';
+    div.innerHTML = `
+      <h3>${express ? '⚡' : '📬'} ${esc(label)}</h3>
+      <div class="tags">
+        ${preisText}
+        ${express ? '<span class="pill pill-orange">Express</span>' : '<span class="pill pill-gray">Standard</span>'}
+        ${partnerLabel ? `<span class="pill pill-purple">🚚 ${esc(partnerLabel)}</span>` : ''}
+      </div>
+      ${hinweis ? `<div class="meta" style="margin-top:.6rem;padding:.4rem .6rem;background:#fef9c3;border-radius:6px;">⚠️ ${esc(hinweis)}</div>` : ''}
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ─── Sperren ───────────────────────────────────────────────────────────────
+function buildSperren(store) {
+  const rows = [...store.query(Q_SPERREN)];
+  document.getElementById('badge-sperren').textContent = rows.length + ' Sperren';
+  const grid = document.getElementById('grid-sperren');
+
+  rows.forEach(row => {
+    const label   = v(row,'label');
+    const grund   = v(row,'grund');
+    const sku     = v(row,'sku') === 'true';
+    const details = v(row,'details');
+    const kats    = v(row,'kats').split('|').filter(Boolean);
+    const laender = v(row,'laender').split('|').filter(Boolean);
+
+    const div = document.createElement('div');
+    div.className = 'info-card sperre-card';
+    div.innerHTML = `
+      <h3>🚫 ${esc(label)}</h3>
+      ${grund ? `<div class="meta">📋 ${esc(grund)}</div>` : ''}
+      <div class="tags">
+        ${kats.map(k => `<span class="pill pill-red">Kat: ${esc(k)}</span>`).join('')}
+        ${laender.map(l => `<span class="pill pill-gray">Land: ${esc(l)}</span>`).join('')}
+        ${sku ? '<span class="pill pill-green">✅ SKU-Überschreibung möglich</span>' : '<span class="pill pill-red">❌ Keine Überschreibung</span>'}
+      </div>
+      ${details ? `<div class="meta" style="margin-top:.6rem;font-size:.78rem;color:#475569;">${esc(details)}</div>` : ''}
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ─── SHACL-Regeln ──────────────────────────────────────────────────────────
+// Icon aus sh:severity ableiten – inhaltsbasiert, nicht positionsbasiert.
+function severityIcon(severityIri) {
+  if (!severityIri) return '⚖️';
+  const local = severityIri.split(/[#/]/).pop();
+  return { Violation: '🚫', Warning: '⚠️', Info: 'ℹ️' }[local] ?? '⚖️';
+}
+
+function buildRegeln(store) {
+  const rows = [...store.query(Q_REGELN)];
+  const grid = document.getElementById('grid-regeln');
+
+  rows.forEach(row => {
+    const label    = v(row,'label');
+    const comment  = v(row,'comment');
+    const severity = v(row,'severity');
+
+    const div = document.createElement('div');
+    div.className = 'info-card regel-card';
+    div.innerHTML = `
+      <h3>${severityIcon(severity)} ${esc(label)}</h3>
+      ${comment ? `<div class="rule-text">${esc(comment)}</div>` : ''}
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// Status-Pill: bekannte Werte bekommen Farbe+Icon, unbekannte einen neutralen Fallback.
+function statusPill(status) {
+  const map = {
+    'offen':      { cls: 'pill-yellow', icon: '🔓' },
+    'geklärt':    { cls: 'pill-green',  icon: '✅' },
+    'abgelehnt':  { cls: 'pill-red',    icon: '❌' },
+    'in Klärung': { cls: 'pill-blue',   icon: '🔄' },
+  };
+  const s = map[status];
+  if (s) return `<span class="pill ${s.cls}">${s.icon} ${esc(status)}</span>`;
+  // Fallback für unbekannte Status-Werte
+  return status ? `<span class="pill pill-gray">📌 ${esc(status)}</span>` : '';
+}
+
+// ─── Offene Punkte ─────────────────────────────────────────────────────────
+function buildOP(store) {
+  const rows = [...store.query(Q_OP)];
+  document.getElementById('badge-op').textContent = rows.length + ' offen';
+  const grid = document.getElementById('grid-op');
+
+  rows.forEach(row => {
+    const label    = v(row,'label');
+    const comment  = v(row,'comment');
+    const created  = v(row,'created');
+    const betrifft = v(row,'betrifft').split('|').filter(Boolean);
+
+    const div = document.createElement('div');
+    div.className = 'info-card op-card';
+    div.innerHTML = `
+      <h3>⚠️ ${esc(label)}</h3>
+      ${comment ? `<div class="meta">${esc(comment)}</div>` : ''}
+      <div class="tags">
+        ${statusPill(v(row,'status'))}
+        ${created ? `<span class="pill pill-gray">📅 ${esc(created)}</span>` : ''}
+        ${betrifft.map(b => `<span class="pill pill-orange">📌 ${esc(b)}</span>`).join('')}
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ─── Graph ─────────────────────────────────────────────────────────────────
+let cy, graphStore;
+function setupGraph(store) {
+  graphStore = store;
+  const tabsEl = document.getElementById('main-tabs');
+  let built = false;
+  tabsEl.addEventListener('sl-tab-show', evt => {
+    if (evt.detail.name === 'graph' && !built) {
+      built = true;
+      // Warten bis das Panel im DOM sichtbar und dimensioniert ist
+      requestAnimationFrame(() => requestAnimationFrame(() => buildGraph()));
+    } else if (evt.detail.name === 'graph' && cy) {
+      requestAnimationFrame(() => cy.resize().fit());
+    }
+  });
+  document.getElementById('btn-fit').addEventListener('click', () => cy?.fit());
+  document.getElementById('layout-sel').addEventListener('sl-change', evt => {
+    cy?.layout(getLayout(evt.target.value)).run();
+  });
+}
+
+// Farbpalette – Typen bekommen Farben in Reihenfolge ihres ersten Auftretens.
+// Neue rdf:type-Werte werden automatisch eingefärbt, kein Hardcoding.
+const TYPE_PALETTE = [
+  '#3b82f6','#16a34a','#0ea5e9','#ef4444',
+  '#f59e0b','#f97316','#8b5cf6','#ec4899','#14b8a6',
+];
+const typeColorMap = new Map();
+function colorForType(typeIri) {
+  if (!typeIri) return '#94a3b8';
+  if (!typeColorMap.has(typeIri)) {
+    typeColorMap.set(typeIri, TYPE_PALETTE[typeColorMap.size % TYPE_PALETTE.length]);
+  }
+  return typeColorMap.get(typeIri);
+}
+
+function buildGraph() {
+  const rows = [...graphStore.query(Q_GRAPH)];
+  const nodes = new Map(), edges = [], seen = new Set();
+
+  for (const row of rows) {
+    const src       = v(row,'source');
+    const tgt       = v(row,'target');
+    const srcL      = v(row,'sourceLabel');
+    const tgtL      = v(row,'targetLabel');
+    const rel       = v(row,'rel');
+    const edgeLabel = v(row,'edgeLabel');
+    const srcType   = v(row,'sourceType');
+    const tgtType   = v(row,'targetType');
+
+    if (src && !nodes.has(src)) nodes.set(src, {
+      data:  { id: src, label: srcL || shortIri(src), type: srcType },
+      style: { 'background-color': colorForType(srcType) }
+    });
+    if (tgt && !nodes.has(tgt)) nodes.set(tgt, {
+      data:  { id: tgt, label: tgtL || shortIri(tgt), type: tgtType },
+      style: { 'background-color': colorForType(tgtType) }
+    });
+    if (src && tgt) {
+      const eid = `${src}→${rel}→${tgt}`;
+      if (!seen.has(eid)) {
+        seen.add(eid);
+        const edgeColor = colorForType(srcType);
+        edges.push({ data: { id: eid, source: src, target: tgt, label: edgeLabel }, style: { 'line-color': edgeColor, 'target-arrow-color': edgeColor } });
+      }
+    }
+  }
+
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: { nodes: [...nodes.values()], edges },
+    style: [
+      {
+        selector: 'node',
+        style: {
+          label: 'data(label)',
+          color: '#fff',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '10px',
+          width: 'label',
+          height: 'label',
+          padding: '10px',
+          shape: 'roundrectangle',
+          'text-wrap': 'wrap',
+          'text-max-width': '120px',
+          'font-weight': '600',
+        }
+      },
+      {
+        selector: 'node:selected',
+        style: { 'border-width': 3, 'border-color': '#fff', 'border-opacity': .9 }
+      },
+      {
+        selector: 'edge',
+        style: {
+          width: 1.8,
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          label: 'data(label)',
+          'font-size': '8px',
+          color: '#64748b',
+          'text-rotation': 'autorotate',
+          'text-margin-y': -7,
+          'text-background-color': '#fff',
+          'text-background-opacity': .8,
+          'text-background-padding': '2px',
+        }
+      }
+    ],
+    layout: getLayout('cose'),
+    minZoom: 0.1,
+    maxZoom: 5,
+  });
+
+  cy.on('tap', 'node', evt => showDetail(evt.target, graphStore));
+  cy.ready(() => { cy.resize(); cy.fit(); });
+  document.getElementById('cy-init').style.display = 'none';
+  buildLegend();
+}
+
+function showDetail(node, store) {
+  const iri = node.id();
+  let html = `
+    <strong style="font-size:1rem;">${esc(node.data('label'))}</strong>
+    <div style="font-size:.72rem;color:#94a3b8;word-break:break-all;margin:.3rem 0 .75rem;">${esc(iri)}</div>
+  `;
+  try {
+    const props = [...store.query(`
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      SELECT ?p ?o WHERE { <${iri}> ?p ?o . FILTER(!isBlank(?o) && ?p != rdf:type) }
+      LIMIT 20
+    `)];
+    for (const r of props) {
+      const pShort = shortIri(r.get('p').value);
+      const oVal   = r.get('o').value;
+      html += `<div style="margin:.35rem 0;">
+        <strong style="display:block;font-size:.7rem;color:#94a3b8;">${esc(pShort)}</strong>
+        <span style="font-size:.82rem;">${esc(shortIri(oVal))}</span>
+      </div>`;
+    }
+  } catch(_) {}
+  document.getElementById('detail-body').innerHTML = html;
+  document.getElementById('detail-drawer').show();
+}
+
+// Legende dynamisch aus den tatsächlich im Graph vorhandenen Typen aufbauen.
+function buildLegend() {
+  const legend = document.getElementById('cy-legend');
+  let html = '<h4>Legende</h4>';
+  for (const [typeIri, color] of typeColorMap) {
+    let label = shortIri(typeIri);
+    try {
+      const rs = [...graphStore.query(
+        `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+         SELECT ?l WHERE { <${typeIri}> rdfs:label ?l FILTER(LANG(?l)="de"||LANG(?l)="") } LIMIT 1`
+      )];
+      if (rs.length) label = rs[0].get('l').value;
+    } catch(_) {}
+    html += `<div class="leg-item"><div class="leg-dot" style="background:${color};"></div> ${esc(label)}</div>`;
+  }
+  legend.innerHTML = html;
+}
+
+function getLayout(name) {
+  const layouts = {
+    cose:         { name:'cose', animate:true, nodeRepulsion:()=>12000, idealEdgeLength:()=>140, gravity:0.3, numIter:1200, randomize:false },
+    breadthfirst: { name:'breadthfirst', directed:true, spacingFactor:1.6 },
+    circle:       { name:'circle', spacingFactor:1.2 },
+    concentric:   { name:'concentric', concentric:n=>n.degree(), levelWidth:()=>2 },
+  };
+  return layouts[name] || layouts.cose;
+}
+
+const shortIri = iri => iri.split(/[/#]/).pop() || iri;
+
+main().catch(e => {
+  document.getElementById('loading-overlay').innerHTML =
+    `<div style="background:#fee2e2;color:#dc2626;padding:1.5rem;border-radius:12px;max-width:500px;">
+      <strong>Fehler beim Laden:</strong><br>${esc(e.message)}
+    </div>`;
+});
+</script>
+</body>
+</html>
