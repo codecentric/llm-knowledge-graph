@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GlossaryConcepts",
+  "description": "Array of domain concepts to serialise as SKOS/RDF Turtle.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["prefLabel"],
+    "additionalProperties": false,
+    "properties": {
+      "prefLabel": {
+        "type": "string",
+        "description": "Preferred label of the concept, in the document language. Use the canonical form (e.g. infinitive for verbs, singular for nouns where appropriate)."
+      },
+      "altLabels": {
+        "type": "array",
+        "description": "Synonyms, abbreviations, or variant spellings. May be empty.",
+        "items": { "type": "string" },
+        "default": []
+      },
+      "definition": {
+        "type": "string",
+        "description": "Short definition (1–2 sentences) derived from the document context. Empty string if not determinable."
+      },
+      "broader": {
+        "type": "string",
+        "description": "prefLabel of a broader (parent) concept within the same glossary. Leave out if unclear.",
+        "default": ""
+      },
+      "related": {
+        "type": "array",
+        "description": "prefLabels of related concepts within the same glossary.",
+        "items": { "type": "string" },
+        "default": []
+      },
+      "note": {
+        "type": "string",
+        "description": "Optional scope note or usage remark.",
+        "default": ""
+      }
+    }
+  },
+  "examples": [
+    [
+      {
+        "prefLabel": "Patientenakte",
+        "altLabels": ["Krankenakte", "PA"],
+        "definition": "Digitale Akte, die alle medizinischen Daten eines Patienten enthält.",
+        "broader": "",
+        "related": ["Diagnose", "Behandlungsplan"],
+        "note": ""
+      },
+      {
+        "prefLabel": "authentifizieren",
+        "altLabels": ["Authentifizierung"],
+        "definition": "Vorgang der Identitätsprüfung eines Nutzers oder Systems.",
+        "broader": "Zugriffskontrolle",
+        "related": ["autorisieren"],
+        "note": "Relevant für alle Systemzugänge."
+      },
+      {
+        "prefLabel": "idempotent",
+        "altLabels": [],
+        "definition": "Eigenschaft einer Operation, die bei Mehrfachausführung dasselbe Ergebnis liefert wie bei Einfachausführung.",
+        "broader": "",
+        "related": ["Transaktion"],
+        "note": ""
+      }
+    ]
+  ]
+}

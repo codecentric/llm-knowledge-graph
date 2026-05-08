@@ -1,0 +1,18 @@
+{
+  "name": "domain-glossary-rdf",
+  "version": "2.0.0",
+  "description": "Serialises LLM-extracted domain concepts as a SKOS/OWL RDF glossary in Turtle format.",
+  "type": "module",
+  "scripts": {
+    "turtle": "node scripts/to-turtle.js",
+    "show":   "node scripts/show-concepts.js"
+  },
+  "dependencies": {
+    "n3": "^1.22.0",
+    "minimist": "^1.2.8"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
