@@ -32,7 +32,7 @@ in `graph/` – deshalb immer dynamisch suchen, nie Pfade hardcoden.
 
 ## SPARQL-Abfragen ausführen
 
-**Skill:** `sparql-query` (bereits installiert unter `.agents/skills/sparql-query/`)
+**Skill:** `sparql-query` (bereits installiert unter `.agents/skills/sparql-query/`) - vor Durchführung von Queries einlesen.
 
 ```bash
 # Abhängigkeiten (einmalig):
@@ -79,9 +79,11 @@ Bei Exit-Code 1 den Fehler beheben, bevor die Antwort an den Nutzer geht.
 
 ## Workflow für jede inhaltliche Nutzerfrage
 
-1. **Alle TTL-Dateien ermitteln:** `find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"`
-2. **SPARQL-Abfrage formulieren** und gegen die relevanten Dateien ausführen (ggf. mehrere Dateien nacheinander abfragen)
-3. **Ergebnis in natürlicher Sprache erklären** – mit Hinweis auf offene Punkte/Unsicherheiten aus dem Graphen
+1. **Skill-Dokumentation lesen:** `cat .agents/skills/sparql-query/SKILL.md`
+2. **Alle TTL-Dateien ermitteln:** `find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"`
+3. **Vorhandene Queries prüfen:** `find queries -name "*.rq"` – passende `.rq`-Datei direkt ausführen
+4. **SPARQL-Abfrage semantisch formulieren** (Typen und Instanzen, kein Textfilter auf URIs)
+5. **Ergebnis in natürlicher Sprache erklären** – mit Hinweis auf offene Punkte/Unsicherheiten aus dem Graphen
 
 ---
 
