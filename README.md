@@ -125,22 +125,24 @@ ohne AI-Agent, ohne Cloud-Dienst, vollständig lokal.
 ### Voraussetzung (einmalig)
 
 ```bash
-cd .agents/skills/sparql-query && npm install
+npm install
 ```
 
 ### Interaktives Menü
 
 ```bash
-./run-query.sh
+npm run query
 ```
 
-Zeigt eine nummerierte Übersicht aller Queries, geordnet nach Fachmodul.
-Einfach Nummer eingeben → Ergebnis wird als Tabelle ausgegeben.
+Zeigt alle Queries geordnet nach Fachmodul. Mit Pfeiltasten navigieren,
+`Enter` auswählen, `q` beenden.
 
-### Hilfe  
+### Direkt ausführen (ohne Menü)
 
 ```bash
-./run-query.sh --help
+npm run query -- 3          # Query Nr. 3 direkt starten
+npm run query -- --list     # Übersicht aller Queries
+npm run query -- --help     # Hilfe
 ```
 ---
 

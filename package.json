@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "query": "node run-query.mjs",
     "validate": "node .agents/skills/sparql-query/scripts/validate.js"
   },
   "dependencies": {
