@@ -33,6 +33,57 @@ find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
 
 ---
 
+## Abfrage-Strategie: Semantisch zuerst, Text als Fallback
+
+Bei jeder inhaltlichen Frage **immer diese Reihenfolge einhalten**:
+
+### 🥇 Primär: Semantische Abfrage (Typ + Objektreferenz)
+
+1. **Klassen und Eigenschaften im Graph ermitteln** – welche `owl:Class`-Instanzen und `rdf:type`-Verwendungen existieren?
+
+```sparql
+SELECT DISTINCT ?klasse ?label WHERE {
+  { ?klasse a owl:Class } UNION { ?x a ?klasse . FILTER(isIRI(?klasse)) }
+  OPTIONAL { ?klasse rdfs:label ?label }
+} ORDER BY ?klasse
+```
+
+2. **Relevante Klasse und benannte Instanz identifizieren** – z. B. `versand:UK`, `:Versandpartner`, `:Landerbeschrankung`
+
+3. **Direkt über Typ und Objektreferenz navigieren** – kein Stringvergleich, sondern Graph-Traversal:
+
+```sparql
+# ✅ Gut: direkte Objektreferenz
+?partner a :Versandpartner ;
+         versand:liefertIn versand:UK .
+
+?sperre a :Landerbeschrankung ;
+        versand:gesperrtFuerLand versand:UK .
+
+# ❌ Schlecht: Textsuche in URIs
+FILTER(CONTAINS(LCASE(STR(?s)), "uk"))
+```
+
+### 🥈 Fallback: Textbasierte Suche
+
+Nur verwenden wenn:
+- die gesuchte Entität **nicht als benanntes Individuum** im Graph existiert
+- die Klassen-/Property-Struktur noch **unbekannt** ist und explorativ erkundet werden muss
+- eine Schritt-1-Abfrage keine verwertbaren Typen liefert
+
+```sparql
+# Fallback: strukturelle Erkundung
+SELECT ?s ?p ?o WHERE {
+  ?s ?p ?o .
+  FILTER(CONTAINS(LCASE(STR(?o)), "suchbegriff"))
+} LIMIT 20
+```
+
+> **Merkrege:** Erst den Graph nach seiner eigenen Struktur fragen,
+> dann entlang dieser Struktur navigieren.
+
+---
+
 ## Workflow
 
 ### Schritt 1 – Abhängigkeiten prüfen / installieren
