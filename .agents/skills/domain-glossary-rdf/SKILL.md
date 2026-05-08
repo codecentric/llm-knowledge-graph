@@ -12,7 +12,7 @@ Dieses Skill analysiert unstrukturierte Eingabedokumente mit LLM-Verständnis, e
 Einmalig ausführen, bevor der Skill zum ersten Mal genutzt wird:
 
 ```bash
-cd /workspace/.agents/skills/domain-glossary-rdf && npm install
+cd .agents/skills/domain-glossary-rdf && npm install
 ```
 
 ## Workflow
@@ -54,7 +54,7 @@ TEXT:
 Das JSON-Array aus Schritt 2 an den Serialisierer übergeben:
 
 ```bash
-echo '<JSON-Array>' | node /workspace/.agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
+echo '<JSON-Array>' | node .agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
   --output glossary.ttl \
   --namespace "https://example.org/glossary#" \
   --lang de \
@@ -64,7 +64,7 @@ echo '<JSON-Array>' | node /workspace/.agents/skills/domain-glossary-rdf/scripts
 Oder als Datei:
 
 ```bash
-node /workspace/.agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
+node .agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
   --input concepts.json \
   --output glossary.ttl \
   --namespace "https://example.org/glossary#" \
@@ -85,7 +85,7 @@ node /workspace/.agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
 ### Schritt 4 – Ergebnis prüfen
 
 ```bash
-node /workspace/.agents/skills/domain-glossary-rdf/scripts/show-concepts.js glossary.ttl
+node .agents/skills/domain-glossary-rdf/scripts/show-concepts.js glossary.ttl
 ```
 
 ## Verwendetes RDF-Vokabular

@@ -2,9 +2,9 @@
 #
 # Datei: graph/glossary.ttl
 # Ausführen:
-#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
-#     --file /workspace/graph/glossary.ttl \
-#     --query /workspace/queries/glossary/hierarchie.rq
+#   node .agents/skills/sparql-query/scripts/query.js \
+#     --file graph/glossary.ttl \
+#     --query queries/glossary/hierarchie.rq
 
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 

@@ -2,9 +2,9 @@
 #
 # Datei: graph/versand.ttl
 # Ausführen:
-#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
-#     --file /workspace/graph/versand.ttl \
-#     --query /workspace/queries/versand/kostenlos-versand-schwellenwerte.rq
+#   node .agents/skills/sparql-query/scripts/query.js \
+#     --file graph/versand.ttl \
+#     --query queries/versand/kostenlos-versand-schwellenwerte.rq
 
 PREFIX versand: <https://shop.example.org/versand#>
 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>

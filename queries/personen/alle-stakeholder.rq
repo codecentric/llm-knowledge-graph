@@ -5,13 +5,13 @@
 # Hier: gegen _vocab.ttl + eine Personendatei testen, oder alle zusammenführen.
 #
 # Ausführen (alle Personen-TTLs auf einmal):
-#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
-#     --file /workspace/graph/personen/thomas.ttl \
-#     --file /workspace/graph/personen/sarah.ttl \
-#     --file /workspace/graph/personen/julia.ttl \
-#     --file /workspace/graph/personen/lena.ttl \
-#     --file /workspace/graph/personen/marco.ttl \
-#     --query /workspace/queries/personen/alle-stakeholder.rq
+#   node .agents/skills/sparql-query/scripts/query.js \
+#     --file graph/personen/thomas.ttl \
+#     --file graph/personen/sarah.ttl \
+#     --file graph/personen/julia.ttl \
+#     --file graph/personen/lena.ttl \
+#     --file graph/personen/marco.ttl \
+#     --query queries/personen/alle-stakeholder.rq
 
 PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
 PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>

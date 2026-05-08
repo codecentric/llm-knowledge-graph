@@ -17,11 +17,11 @@
  *   --help              Show this message
  *
  * Examples:
- *   node query.js --file /workspace/glossary.ttl \
+ *   node query.js --file graph/glossary.ttl \
  *     --sparql "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10"
  *
- *   node query.js --file /workspace/glossary.ttl \
- *     --query /workspace/.agents/skills/sparql-query/queries/all-concepts.rq
+ *   node query.js --file graph/glossary.ttl \
+ *     --query .agents/skills/sparql-query/queries/all-concepts.rq
  */
 
 import fs   from "fs";

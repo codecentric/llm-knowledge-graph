@@ -223,7 +223,7 @@ Mit URIs sind Fragen wie *„Welche Regeln hat Julia definiert?"*, *„Welche of
 1. Alle verwendeten Präfixe per `grep -o '[a-z]*:' datei.ttl | sort -u` ermitteln
 2. Für jeden Präfix prüfen ob `@prefix xyz: <...> .` oben in der Datei steht
 3. Keine typografischen Anführungszeichen (`„“`) innerhalb von Turtle-Literals – nur `"..."`; innere Anführungszeichen als einfache Hochkommas (`'`) oder mit `\"` escapen
-4. Nach dem Anlegen/Ändern validieren: `cd /workspace && npm run validate`
+4. Nach dem Anlegen/Ändern validieren: `npm run validate`
 
 ### Standardsatz Prefixe für dieses Depot
 

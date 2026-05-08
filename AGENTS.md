@@ -21,7 +21,7 @@ Der Knowledge Graph wächst dynamisch. **Nie einzelne Dateien hardcoden.**
 Stattdessen vor jeder Abfrage alle vorhandenen TTL/RDF-Dateien ermitteln:
 
 ```bash
-find /workspace/graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
+find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
 ```
 
 Alle gefundenen Dateien sind gleichwertige Teile des Knowledge Graphs und müssen
@@ -32,15 +32,15 @@ in `graph/` – deshalb immer dynamisch suchen, nie Pfade hardcoden.
 
 ## SPARQL-Abfragen ausführen
 
-**Skill:** `sparql-query` (bereits installiert unter `/workspace/.agents/skills/sparql-query/`)
+**Skill:** `sparql-query` (bereits installiert unter `.agents/skills/sparql-query/`)
 
 ```bash
 # Abhängigkeiten (einmalig):
-cd /workspace/.agents/skills/sparql-query && npm install
+cd .agents/skills/sparql-query && npm install
 
 # Abfrage ausführen:
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/versand.ttl \
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/versand.ttl \
   --sparql "PREFIX versand: <https://shop.example.org/versand#> SELECT ..."
 ```
 
@@ -67,10 +67,10 @@ Nur die tatsächlich geänderten Dateien übergeben:
 
 ```bash
 # Eine oder mehrere konkrete Dateien prüfen (bevorzugt):
-cd /workspace && node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl queries/versand/laendersperren.rq
+node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl queries/versand/laendersperren.rq
 
 # Alle Dateien prüfen (nur wenn viele Dateien auf einmal geändert wurden):
-cd /workspace && npm run validate
+npm run validate
 ```
 
 Bei Exit-Code 1 den Fehler beheben, bevor die Antwort an den Nutzer geht.
@@ -79,7 +79,7 @@ Bei Exit-Code 1 den Fehler beheben, bevor die Antwort an den Nutzer geht.
 
 ## Workflow für jede inhaltliche Nutzerfrage
 
-1. **Alle TTL-Dateien ermitteln:** `find /workspace/graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"`
+1. **Alle TTL-Dateien ermitteln:** `find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"`
 2. **SPARQL-Abfrage formulieren** und gegen die relevanten Dateien ausführen (ggf. mehrere Dateien nacheinander abfragen)
 3. **Ergebnis in natürlicher Sprache erklären** – mit Hinweis auf offene Punkte/Unsicherheiten aus dem Graphen
 

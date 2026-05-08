@@ -117,6 +117,33 @@ Die Rohdokumente bleiben im Repository erhalten, um die **Herkunft jedes Graphkn
 
 ---
 
+## Queries selbst ausführen – ohne LLM
+
+Alle vordefinierten SPARQL-Abfragen lassen sich direkt im Terminal ausführen –
+ohne AI-Agent, ohne Cloud-Dienst, vollständig lokal.
+
+### Voraussetzung (einmalig)
+
+```bash
+cd .agents/skills/sparql-query && npm install
+```
+
+### Interaktives Menü
+
+```bash
+./run-query.sh
+```
+
+Zeigt eine nummerierte Übersicht aller Queries, geordnet nach Fachmodul.
+Einfach Nummer eingeben → Ergebnis wird als Tabelle ausgegeben.
+
+### Hilfe  
+
+```bash
+./run-query.sh --help
+```
+---
+
 ## Tech-Stack
 
 - **Wissensrepräsentation:** RDF (Resource Description Framework)

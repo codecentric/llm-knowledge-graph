@@ -1,14 +1,14 @@
 # Alle offenen Fragen / ungeklärten Punkte mit verantwortlicher Person
 #
 # Ausführen:
-#   node /workspace/.agents/skills/sparql-query/scripts/query.js \
-#     --file /workspace/graph/personen/thomas.ttl \
-#     --file /workspace/graph/personen/sarah.ttl \
-#     --file /workspace/graph/personen/julia.ttl \
-#     --file /workspace/graph/personen/lena.ttl \
-#     --file /workspace/graph/personen/marco.ttl \
-#     --file /workspace/graph/personen/_vocab.ttl \
-#     --query /workspace/queries/personen/offene-fragen.rq
+#   node .agents/skills/sparql-query/scripts/query.js \
+#     --file graph/personen/thomas.ttl \
+#     --file graph/personen/sarah.ttl \
+#     --file graph/personen/julia.ttl \
+#     --file graph/personen/lena.ttl \
+#     --file graph/personen/marco.ttl \
+#     --file graph/personen/_vocab.ttl \
+#     --query queries/personen/offene-fragen.rq
 
 PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
 PREFIX person: <https://shop.example.org/personen#>

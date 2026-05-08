@@ -13,7 +13,7 @@ Führt SPARQL-Abfragen gegen lokale RDF/Turtle-Dateien aus – angetrieben von
 Einmalig ausführen, bevor der Skill erstmals genutzt wird:
 
 ```bash
-cd /workspace/.agents/skills/sparql-query && npm install
+cd .agents/skills/sparql-query && npm install
 ```
 
 ## Knowledge Graph im Depot
@@ -28,7 +28,7 @@ graph/personen/*.ttl        ← Stakeholder, Entscheidungen, offene Fragen
 
 Alle TTL-Dateien dynamisch ermitteln:
 ```bash
-find /workspace/graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
+find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
 ```
 
 ---
@@ -38,7 +38,7 @@ find /workspace/graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
 ### Schritt 1 – Abhängigkeiten prüfen / installieren
 
 ```bash
-cd /workspace/.agents/skills/sparql-query && npm install
+cd .agents/skills/sparql-query && npm install
 ```
 
 ### Schritt 2 – Abfrage ausführen
@@ -46,8 +46,8 @@ cd /workspace/.agents/skills/sparql-query && npm install
 **Inline-SPARQL (einfach für kurze Abfragen):**
 
 ```bash
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/graph/glossary.ttl \
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/glossary.ttl \
   --sparql "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             SELECT ?c ?label WHERE { ?c a skos:Concept ; skos:prefLabel ?label }
             ORDER BY ?label LIMIT 20"
@@ -56,16 +56,16 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 **Mit .rq-Datei (für längere / wiederverwendbare Abfragen):**
 
 ```bash
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/graph/glossary.ttl \
-  --query /workspace/queries/glossary/alle-konzepte.rq
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/glossary.ttl \
+  --query queries/glossary/alle-konzepte.rq
 ```
 
 **Mit explizitem Limit (Sicherheitskappung, nur für SELECT ohne eigenes LIMIT):**
 
 ```bash
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/graph/glossary.ttl \
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/glossary.ttl \
   --sparql "SELECT ?s ?p ?o WHERE { ?s ?p ?o }" \
   --limit 50
 ```
@@ -73,16 +73,16 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 **ASK-Abfrage:**
 
 ```bash
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/graph/glossary.ttl \
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/glossary.ttl \
   --sparql "ASK { <https://shop.example.org/glossary#Checkout> a <http://www.w3.org/2004/02/skos/core#Concept> }"
 ```
 
 **CONSTRUCT (Teilgraph extrahieren):**
 
 ```bash
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/graph/glossary.ttl \
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/glossary.ttl \
   --sparql "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             CONSTRUCT { ?s skos:prefLabel ?l ; skos:broader ?b }
             WHERE { ?s a skos:Concept ; skos:prefLabel ?l . OPTIONAL { ?s skos:broader ?b } }"
@@ -91,22 +91,22 @@ node /workspace/.agents/skills/sparql-query/scripts/query.js \
 **JSON-Ausgabe (maschinenlesbar):**
 
 ```bash
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/graph/glossary.ttl \
-  --query /workspace/queries/glossary/alle-konzepte.rq \
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/glossary.ttl \
+  --query queries/glossary/alle-konzepte.rq \
   --format json
 ```
 
 **Mehrere Dateien gleichzeitig (z. B. alle Personen-TTLs):**
 
 ```bash
-node /workspace/.agents/skills/sparql-query/scripts/query.js \
-  --file /workspace/graph/personen/thomas.ttl \
-  --file /workspace/graph/personen/sarah.ttl \
-  --file /workspace/graph/personen/julia.ttl \
-  --file /workspace/graph/personen/lena.ttl \
-  --file /workspace/graph/personen/marco.ttl \
-  --query /workspace/queries/personen/alle-stakeholder.rq
+node .agents/skills/sparql-query/scripts/query.js \
+  --file graph/personen/thomas.ttl \
+  --file graph/personen/sarah.ttl \
+  --file graph/personen/julia.ttl \
+  --file graph/personen/lena.ttl \
+  --file graph/personen/marco.ttl \
+  --query queries/personen/alle-stakeholder.rq
 ```
 
 ---
@@ -192,14 +192,14 @@ Für weitere SPARQL-Muster → [references/sparql-cheatsheet.md](references/spar
 Nur die tatsächlich geänderten Dateien übergeben (sehr schnell, ~150ms):
 
 ```bash
-cd /workspace && node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl
-cd /workspace && node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl queries/versand/laendersperren.rq
+node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl
+node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl queries/versand/laendersperren.rq
 ```
 
 Alle Dateien auf einmal (wenn viele Dateien geändert wurden):
 
 ```bash
-cd /workspace && npm run validate
+npm run validate
 ```
 
 Das Skript prüft:

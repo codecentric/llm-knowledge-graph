@@ -49,7 +49,7 @@ Das passende Template aus `templates/` als Basis nehmen und mit den Skripten bef
 
 ```bash
 # Tabellen-/Card-Ansicht
-node /workspace/.agents/skills/kg-html-visualizer/scripts/generate.js \
+node .agents/skills/kg-html-visualizer/scripts/generate.js \
   --ttl input.ttl \
   --type table \
   --sparql "SELECT ?s ?label ?def WHERE { ?s a skos:Concept ; skos:prefLabel ?label ; skos:definition ?def }" \
@@ -57,7 +57,7 @@ node /workspace/.agents/skills/kg-html-visualizer/scripts/generate.js \
   --output apps/mein-glossar.html
 
 # Kraft-Graph
-node /workspace/.agents/skills/kg-html-visualizer/scripts/generate.js \
+node .agents/skills/kg-html-visualizer/scripts/generate.js \
   --ttl input.ttl \
   --type graph \
   --title "Konzept-Netzwerk" \
