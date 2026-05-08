@@ -1,0 +1,17 @@
+{
+  "name": "sparql-query",
+  "version": "1.0.0",
+  "description": "SPARQL query runner for local RDF/Turtle knowledge graphs via Comunica.",
+  "type": "module",
+  "scripts": {
+    "query": "node scripts/query.js"
+  },
+  "dependencies": {
+    "@comunica/query-sparql-file": "^5.2.2",
+    "minimist": "^1.2.8"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

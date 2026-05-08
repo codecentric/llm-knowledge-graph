@@ -1,0 +1,9 @@
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?child ?childLabel ?parent ?parentLabel
+WHERE {
+  ?child skos:broader ?parent ;
+         skos:prefLabel ?childLabel .
+  ?parent skos:prefLabel ?parentLabel .
+}
+ORDER BY ?parentLabel ?childLabel

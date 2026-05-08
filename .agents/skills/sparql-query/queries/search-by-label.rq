@@ -1,0 +1,11 @@
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+# Replace "Versand" with any search term (case-insensitive substring match)
+SELECT ?concept ?label ?definition
+WHERE {
+  ?concept a skos:Concept ;
+           skos:prefLabel ?label .
+  OPTIONAL { ?concept skos:definition ?definition . }
+  FILTER(CONTAINS(LCASE(STR(?label)), LCASE("Versand")))
+}
+ORDER BY ?label

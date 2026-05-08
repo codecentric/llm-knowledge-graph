@@ -1,0 +1,11 @@
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+# Top-level concepts: those that have no skos:broader
+SELECT ?concept ?label ?definition
+WHERE {
+  ?concept a skos:Concept ;
+           skos:prefLabel ?label .
+  OPTIONAL { ?concept skos:definition ?definition . }
+  FILTER NOT EXISTS { ?concept skos:broader ?parent }
+}
+ORDER BY ?label

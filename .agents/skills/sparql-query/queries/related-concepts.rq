@@ -1,0 +1,9 @@
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?conceptLabel ?relatedLabel
+WHERE {
+  ?concept skos:related ?related ;
+           skos:prefLabel ?conceptLabel .
+  ?related skos:prefLabel ?relatedLabel .
+}
+ORDER BY ?conceptLabel
