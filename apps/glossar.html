@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop-Fachglossar: Checkout, Versand &amp; Preisregeln</title>
+
+  <!-- Shoelace -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+
+  <!-- Cytoscape -->
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+
+  <style>
+    :root { --sl-color-primary-600: #4f6ef7; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: var(--sl-font-sans, system-ui, sans-serif);
+      margin: 0; background: #f5f7fb; color: #1a1a2e;
+      display: flex; flex-direction: column; height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16325c 100%);
+      color: #fff; padding: .85rem 1.4rem;
+      display: flex; align-items: center; gap: .9rem; flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 1.15rem; flex: 1; letter-spacing: -.01em; }
+    header .badges { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+    .toolbar {
+      display: flex; gap: .45rem; align-items: center; flex-wrap: wrap;
+      padding: .5rem 1rem; background: #fff;
+      border-bottom: 1px solid #e4e7f0;
+    }
+    .toolbar-sep { flex: 1; }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    #cy-wrap { flex: 1; position: relative; overflow: hidden; }
+    #cy      { width: 100%; height: 100%; background: #fafbff; }
+
+    /* detail panel */
+    #detail {
+      width: 310px; min-width: 0;
+      border-left: 1px solid #e4e7f0; background: #fff;
+      padding: 1rem; overflow-y: auto; font-size: .87rem;
+      transition: width .22s ease, padding .22s ease;
+    }
+    #detail.hidden { width: 0; padding: 0; overflow: hidden; border: none; }
+    #detail h2     { font-size: 1rem; margin: 0 0 .25rem; color: #1a1a2e; }
+    #detail .iri   { font-size: .72rem; color: #aaa; word-break: break-all; margin-bottom: .8rem; }
+    #detail .def   { line-height: 1.55; color: #333; margin-bottom: .8rem; background: #f5f7fb; padding: .55rem .65rem; border-radius: 6px; }
+    #detail .section-head { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #888; margin: .7rem 0 .3rem; }
+    #detail .tag-list { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .5rem; }
+    #detail .empty-msg { color: #bbb; font-size: .85rem; margin: 0; }
+
+    /* legend */
+    #legend {
+      position: absolute; bottom: 12px; left: 12px;
+      background: rgba(255,255,255,.93); border-radius: 8px;
+      padding: .55rem .8rem; font-size: .78rem; line-height: 2;
+      box-shadow: 0 2px 10px rgba(0,0,0,.08);
+      border: 1px solid #e8eaf0;
+    }
+    .leg-row { display: flex; align-items: center; gap: 6px; }
+    .leg-dot  { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .leg-line { display: inline-block; width: 22px; height: 0; flex-shrink: 0; }
+
+    /* search */
+    #search-wrap { position: absolute; top: 10px; right: 10px; z-index: 5; }
+
+    /* status overlay */
+    #status {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #fafbff; z-index: 10;
+    }
+    #status p { color: #888; margin-top: .75rem; font-size: .9rem; }
+
+    /* minimap stub */
+    #minimap-info {
+      position: absolute; bottom: 12px; right: 12px;
+      background: rgba(255,255,255,.88); border-radius: 6px;
+      padding: .35rem .6rem; font-size: .72rem; color: #999;
+      border: 1px solid #e8eaf0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 id="page-title">Shop-Fachglossar: Checkout, Versand &amp; Preisregeln</h1>
+  <div class="badges">
+    <sl-badge id="node-count" variant="neutral" pill>– Konzepte</sl-badge>
+    <sl-badge id="edge-count" variant="neutral" pill>– Relationen</sl-badge>
+  </div>
+</header>
+
+<div class="toolbar">
+  <sl-button size="small" id="btn-fit">
+    <sl-icon slot="prefix" name="arrows-fullscreen"></sl-icon> Fit
+  </sl-button>
+  <sl-button size="small" id="btn-relayout">
+    <sl-icon slot="prefix" name="shuffle"></sl-icon> Neu anordnen
+  </sl-button>
+  <sl-select id="layout-select" size="small" value="cose" style="width:170px;">
+    <sl-option value="cose">CoSE (Kraft)</sl-option>
+    <sl-option value="breadthfirst">Breadth-first</sl-option>
+    <sl-option value="circle">Kreis</sl-option>
+    <sl-option value="concentric">Konzentrisch</sl-option>
+    <sl-option value="grid">Grid</sl-option>
+  </sl-select>
+
+  <div class="toolbar-sep"></div>
+
+  <!-- Filter: Relationstyp -->
+  <sl-checkbox id="cb-broader" checked>
+    <span style="color:#e07b54;font-weight:600;">●</span> broader
+  </sl-checkbox>
+  <sl-checkbox id="cb-related" checked>
+    <span style="color:#54b0e0;font-weight:600;">●</span> related
+  </sl-checkbox>
+
+  <div class="toolbar-sep"></div>
+
+  <sl-button size="small" id="btn-toggle-detail">
+    <sl-icon slot="prefix" name="layout-sidebar-reverse"></sl-icon> Details
+  </sl-button>
+</div>
+
+<div id="main">
+  <div id="cy-wrap">
+    <div id="status">
+      <sl-spinner style="font-size:3rem;"></sl-spinner>
+      <p>Lade Wissensgraph …</p>
+    </div>
+
+    <div id="cy"></div>
+
+    <!-- Inline-Suche -->
+    <div id="search-wrap">
+      <sl-input id="search-input" size="small" placeholder="Konzept suchen …" clearable style="width:210px;">
+        <sl-icon slot="prefix" name="search"></sl-icon>
+      </sl-input>
+    </div>
+
+    <div id="legend">
+      <div class="leg-row"><span class="leg-dot" style="background:#4f6ef7;"></span> Konzept-Knoten</div>
+      <div class="leg-row">
+        <span class="leg-line" style="border-top:2.5px solid #e07b54;"></span>
+        <span>skos:broader</span>
+      </div>
+      <div class="leg-row">
+        <span class="leg-line" style="border-top:2.5px dashed #54b0e0;"></span>
+        <span>skos:related</span>
+      </div>
+    </div>
+
+    <div id="minimap-info">Scroll = Zoom · Drag = Pan · Klick = Details</div>
+  </div>
+
+  <div id="detail">
+    <p class="empty-msg">Klicke einen Knoten an, um Details zu sehen.</p>
+  </div>
+</div>
+
+<script type="module">
+// ─── Eingebettete TTL-Daten ────────────────────────────────────────────────
+const TTL_DATA = `@prefix : <https://shop.example.org/glossary#>.
+@prefix skos: <http://www.w3.org/2004/02/skos/core#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix dct: <http://purl.org/dc/terms/>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+
+<https://shop.example.org/glossary#> a owl:Ontology;
+    dct:title "Shop-Fachglossar: Checkout, Versand & Preisregeln";
+    dct:created "2026-05-08"^^xsd:date;
+    dct:source "produkte-kategorien.csv", "meeting-checkout-versand.md", "slack-export-preisregeln.md".
+:GlossaryScheme a skos:ConceptScheme;
+    skos:prefLabel "Shop-Fachglossar: Checkout, Versand & Preisregeln"@de;
+    rdfs:comment "Auto-generated by domain-glossary-rdf skill. 47 concept(s). Review and enrich manually.".
+:Produktkategorie a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Produktkategorie"@de;
+    skos:altLabel "Kategorie"@de;
+    skos:definition "Klassifikationseinheit zur Gruppierung von Produkten im Shop-System, kann einer übergeordneten Kategorie zugeordnet sein."@de;
+    skos:related :SKU, :Versandpflichtig.
+:Elektronik a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Elektronik"@de;
+    skos:definition "Oberste Produktkategorie für elektronische Geräte und Zubehör."@de;
+    skos:broader :Produktkategorie;
+    skos:related :Smartphones, :Laptops, :Gaming.
+:Smartphones a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Smartphones"@de;
+    skos:definition "Unterkategorie von Elektronik für mobile Endgeräte."@de;
+    skos:broader :Elektronik;
+    skos:related :Laptops.
+:Laptops a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Laptops"@de;
+    skos:definition "Unterkategorie von Elektronik für tragbare Computer."@de;
+    skos:broader :Elektronik;
+    skos:related :Smartphones.
+:Software a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Software"@de;
+    skos:definition "Produktkategorie für Softwareprodukte; Typ und Elternkategorie noch ungeklärt, wird digital geliefert."@de;
+    skos:broader :Produktkategorie;
+    skos:related :Digitales_Produkt, :Gaming_Downloads.
+:E-Books a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "E-Books"@de;
+    skos:definition "Digitale Produktkategorie für elektronische Bücher, wird ausschließlich digital geliefert."@de;
+    skos:broader :Digitales_Produkt;
+    skos:related :Software.
+:Gaming a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Gaming"@de;
+    skos:altLabel "Konsolen und Zubehör"@de;
+    skos:definition "Unterkategorie von Elektronik für Spielkonsolen und Zubehör (physische Artikel)."@de;
+    skos:broader :Elektronik;
+    skos:related :Gaming_Downloads.
+:Gaming_Downloads a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Gaming Downloads"@de;
+    skos:definition "Digitale Unterkategorie von Gaming für herunterladbare Spiele und Inhalte; mögliche Überschneidung mit Software."@de;
+    skos:broader :Gaming;
+    skos:related :Software, :Digitales_Produkt.
+:Kleidung a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Kleidung"@de;
+    skos:definition "Physische Produktkategorie für Bekleidung."@de;
+    skos:broader :Produktkategorie;
+    skos:related :Schuhe, :Accessoires.
+:Schuhe a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Schuhe"@de;
+    skos:definition "Physische Unterkategorie von Kleidung für Schuhwaren."@de;
+    skos:broader :Kleidung;
+    skos:related :Accessoires.
+:Accessoires a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Accessoires"@de;
+    skos:definition "Physische Unterkategorie von Kleidung; umfasst Schmuck und Taschen."@de;
+    skos:broader :Kleidung;
+    skos:related :Schuhe.
+:Haushalt a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Haushalt"@de;
+    skos:definition "Physische Produktkategorie für Haushaltsartikel."@de;
+    skos:broader :Produktkategorie;
+    skos:related :Mobel, :Sperrgut.
+:Mobel a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Möbel"@de;
+    skos:definition "Physische Unterkategorie von Haushalt; erfordert gesonderte Versandregeln als Sperrgut."@de;
+    skos:broader :Haushalt;
+    skos:related :Sperrgut.
+:Lebensmittel a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Lebensmittel"@de;
+    skos:definition "Physische Produktkategorie mit besonderer Behandlung: nur Lieferung in DE und AT, keine Rabatte, ggf. Kühlpflicht."@de;
+    skos:broader :Produktkategorie;
+    skos:related :Kuhlpflichtiger_Artikel, :Landerbeschrankung, :Rabattfrei.
+:Digitales_Produkt a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Digitales Produkt"@de;
+    skos:altLabel "digitale Lieferung"@de;
+    skos:definition "Produkt, das ausschließlich elektronisch geliefert wird, ohne physischen Versand; generell rabattfrei."@de;
+    skos:broader :Produktkategorie;
+    skos:related :E-Books, :Software, :Gaming_Downloads, :Rabattfrei.
+:Physisches_Produkt a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Physisches Produkt"@de;
+    skos:altLabel "physisch"@de;
+    skos:definition "Produkt, das als physische Ware versandt wird und der Versandpflicht unterliegt."@de;
+    skos:broader :Produktkategorie;
+    skos:related :Versandpflichtig, :Versandpartner.
+:SKU a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "SKU"@de;
+    skos:altLabel "Artikel"@de, "Stock Keeping Unit"@de;
+    skos:definition "Eindeutige Identifikationseinheit für ein einzelnes Produkt im System; ermöglicht SKU-spezifische Überschreibung von Kategorie-Regeln."@de;
+    skos:related :Produktkategorie, :Landerbeschrankung.
+:Warenkorb a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Warenkorb"@de;
+    skos:definition "Digitaler Behälter, der die vom Kunden ausgewählten Produkte vor der Bestellung enthält; Grundlage für Rabatt- und Versandberechnungen."@de;
+    skos:related :Bestellung, :Warenkorbwert, :Rabattlogik.
+:Bestellung a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Bestellung"@de;
+    skos:altLabel "Order"@de;
+    skos:definition "Abgeschlossener Kaufvorgang eines Kunden; Grundlage für Kundenstatus und Zahlungsartberechtigung."@de;
+    skos:related :Warenkorb, :Bestandskunde, :Zahlungsmethode.
+:Warenkorbwert a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Warenkorbwert"@de;
+    skos:definition "Gesamtsumme aller Artikel im Warenkorb; Schwellenwert für kostenlosen Versand."@de;
+    skos:broader :Warenkorb;
+    skos:related :Kostenloser_Versand, :Bruttopreis.
+:Zahlungsmethode a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Zahlungsmethode"@de;
+    skos:altLabel "Zahlungsart"@de;
+    skos:definition "Vom Kunden gewähltes Bezahlverfahren beim Checkout; abhängig von Land und Kundenstatus."@de;
+    skos:related :Kreditkarte, :PayPal, :Rechnung, :Sofortuberweisung, :Ratenkauf.
+:Kreditkarte a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Kreditkarte"@de;
+    skos:definition "Zahlungsmethode, die für alle Länder angeboten wird."@de;
+    skos:broader :Zahlungsmethode;
+    skos:related :PayPal, :Sofortuberweisung.
+:PayPal a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "PayPal"@de;
+    skos:definition "Zahlungsmethode, verfügbar in EU, UK und Schweiz; außerhalb nicht rentabel wegen Gebühren."@de;
+    skos:broader :Zahlungsmethode;
+    skos:related :Kreditkarte.
+:Rechnung a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Rechnung"@de;
+    skos:definition "Zahlungsmethode, die ausschließlich für Bestandskunden ohne offenen Mahnfall verfügbar ist."@de;
+    skos:broader :Zahlungsmethode;
+    skos:related :Bestandskunde, :Mahnfall.
+:Sofortuberweisung a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Sofortüberweisung"@de;
+    skos:definition "Zahlungsmethode, die nur in den DACH-Ländern (Deutschland, Österreich, Schweiz) verfügbar ist."@de;
+    skos:broader :Zahlungsmethode;
+    skos:related :Kreditkarte, :PayPal.
+:Ratenkauf a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Ratenkauf"@de;
+    skos:definition "Zahlungsmethode, die zunächst aus dem Projekt-Scope ausgenommen wurde."@de;
+    skos:broader :Zahlungsmethode.
+:Bestandskunde a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Bestandskunde"@de;
+    skos:definition "Kunde mit mindestens einer abgeschlossenen Bestellung und ohne offenen Mahnfall; berechtigt zur Zahlung per Rechnung."@de;
+    skos:related :Bestellung, :Mahnfall, :Rechnung.
+:Mahnfall a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Mahnfall"@de;
+    skos:altLabel "offener Mahnfall"@de;
+    skos:definition "Kundenstatus mit offenen, überfälligen Forderungen; schließt die Zahlungsart Rechnung aus."@de;
+    skos:related :Bestandskunde, :Rechnung.
+:Versandpartner a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Versandpartner"@de;
+    skos:altLabel "Versandanbieter"@de;
+    skos:definition "Externes Logistikunternehmen, das den physischen Warenversand durchführt (z. B. DHL, DPD, Spedition)."@de;
+    skos:related :Versandoption, :Lieferzeit, :Landerbeschrankung.
+:Versandoption a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Versandoption"@de;
+    skos:definition "Konkrete Versandvariante mit definiertem Anbieter, Lieferzeit und Geltungsbereich."@de;
+    skos:related :Versandpartner, :Lieferzeit, :Kostenloser_Versand.
+:Lieferzeit a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Lieferzeit"@de;
+    skos:altLabel "Lieferfrist"@de;
+    skos:definition "Zeitspanne zwischen Bestelleingang und Lieferung beim Kunden, angegeben in Werktagen."@de;
+    skos:broader :Versandoption;
+    skos:related :Versandpartner.
+:Kostenloser_Versand a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Kostenloser Versand"@de;
+    skos:definition "Versandkostenbefreiung für den Kunden ab einem definierten Warenkorbwert; länderspezifische Schwellenwerte."@de;
+    skos:broader :Versandoption;
+    skos:related :Warenkorbwert, :Landerbeschrankung.
+:Sperrgut a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Sperrgut"@de;
+    skos:altLabel "Sperrgut-Versand"@de;
+    skos:definition "Großformatige oder schwere physische Artikel (insb. Möbel), für die gesonderte Versandregeln und ein spezieller Versandpartner (Spedition) gelten."@de;
+    skos:broader :Physisches_Produkt;
+    skos:related :Mobel, :Versandpartner.
+:Kuhlpflichtiger_Artikel a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Kühlpflichtiger Artikel"@de;
+    skos:altLabel "Kühlware"@de;
+    skos:definition "Lebensmittel, die eine Kühlkette während des Versands erfordern; Sonderfall noch offen."@de;
+    skos:broader :Lebensmittel;
+    skos:related :Versandoption.
+:Landerbeschrankung a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Länderbeschränkung"@de;
+    skos:altLabel "Sperrliste"@de;
+    skos:definition "Regel, die die Lieferung bestimmter Produktkategorien oder SKUs in bestimmte Länder untersagt (z. B. Messer nach UK, Lebensmittel nur DEAT)."@de;
+    skos:related :Produktkategorie, :SKU, :Versandpartner.
+:SKU-spezifische_Uberschreibung a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "SKU-spezifische Überschreibung"@de;
+    skos:definition "Mechanismus, mit dem kategorie-basierte Regeln (z. B. Länderbeschränkungen) für einzelne Artikel (SKUs) individuell überschrieben werden können."@de;
+    skos:broader :Landerbeschrankung;
+    skos:related :SKU, :Produktkategorie.
+:Rabattlogik a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Rabattlogik"@de;
+    skos:altLabel "Preisregel"@de;
+    skos:definition "Gesamtheit der Regeln, nach denen Rabatte auf Produkte und Warenkörbe angewendet, kombiniert oder ausgeschlossen werden."@de;
+    skos:related :Gutscheincode, :Sale-Angebot, :Treuerabatt, :Rabattfrei.
+:Prozentualer_Rabatt a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Prozentualer Rabatt"@de;
+    skos:definition "Rabatt, der als prozentualer Abzug vom Preis gewährt wird; maximal einer pro Warenkorb (exkl. Treuerabatt)."@de;
+    skos:broader :Rabattlogik;
+    skos:related :Gutscheincode, :Sale-Angebot, :Treuerabatt.
+:Gutscheincode a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Gutscheincode"@de;
+    skos:altLabel "Coupon"@de;
+    skos:definition "Kundenindividueller Rabattcode, der pro Bestellung genau einmal eingelöst werden kann; schließt Sale-Angebote aus."@de;
+    skos:broader :Prozentualer_Rabatt;
+    skos:related :Sale-Angebot, :Rabattlogik.
+:Sale-Angebot a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Sale-Angebot"@de;
+    skos:altLabel "Sale"@de, "Aktionsrabatt"@de;
+    skos:definition "Automatisch angewendetes zeitlich begrenztes Rabattangebot; hat Vorrang gegenüber Gutscheincodes."@de;
+    skos:broader :Prozentualer_Rabatt;
+    skos:related :Gutscheincode, :Rabattlogik.
+:Treuerabatt a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Treuerabatt"@de;
+    skos:altLabel "Loyalitätsrabatt"@de;
+    skos:definition "Automatisch angewendeter Rabatt basierend auf gesammelten Treuepunkten; kombinierbar mit anderen Rabatten, maximal 10 %."@de;
+    skos:broader :Rabattlogik;
+    skos:related :Treuepunkte, :Prozentualer_Rabatt.
+:Treuepunkte a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Treuepunkte"@de;
+    skos:altLabel "Punkte"@de;
+    skos:definition "Vom Kunden gesammelte Punkte im Rahmen eines Treueprogramms, die in Treuerabatte umgewandelt werden können."@de;
+    skos:related :Treuerabatt, :Bestandskunde.
+:Rabattfrei a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Rabattfrei"@de;
+    skos:altLabel "keine Rabatte"@de;
+    skos:definition "Eigenschaft von Produkten oder Kategorien (Lebensmittel, digitale Produkte), auf die keinerlei Rabatte angewendet werden dürfen – auch kein Treuerabatt; steuerlich begründet."@de;
+    skos:broader :Rabattlogik;
+    skos:related :Digitales_Produkt, :Lebensmittel.
+:Bundle a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Bundle"@de;
+    skos:altLabel "Produktbundle"@de, "gemischtes Bundle"@de;
+    skos:definition "Kombination mehrerer Produkte (physisch und/oder digital) zu einem Gesamtangebot; Rabattfähigkeit hängt vom Anteil digitaler Inhalte am Bruttopreis ab (> 50 % = rabattfrei)."@de;
+    skos:related :Digitales_Produkt, :Physisches_Produkt, :Rabattfrei, :Bruttopreis.
+:Bruttopreis a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Bruttopreis"@de;
+    skos:altLabel "Gesamtpreis"@de;
+    skos:definition "Preis eines Produkts oder Bundles inklusive aller Steuern; Basis für die Berechnung des digitalen Anteils bei gemischten Bundles."@de;
+    skos:related :Bundle, :Warenkorbwert.
+:Versandpflichtig a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Versandpflichtig"@de;
+    skos:definition "Eigenschaft einer Produktkategorie, die angibt, ob der Artikel physisch versandt werden muss."@de;
+    skos:broader :Produktkategorie;
+    skos:related :Physisches_Produkt, :Versandoption.
+:Checkout a skos:Concept;
+    skos:inScheme :GlossaryScheme;
+    skos:prefLabel "Checkout"@de;
+    skos:altLabel "Bestellprozess"@de;
+    skos:definition "Abschlussprozess eines Kaufvorgangs, bei dem Zahlungsmethode, Versandoption und Lieferadresse festgelegt werden."@de;
+    skos:related :Warenkorb, :Bestellung, :Zahlungsmethode, :Versandoption.`;
+
+// ─── SPARQL: Alle Kanten (broader + related) ─────────────────────────────
+const SPARQL_EDGES = `
+  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  SELECT ?source ?sourceLabel ?target ?targetLabel ?relType WHERE {
+    {
+      ?source skos:broader ?target .
+      BIND("broader" AS ?relType)
+    } UNION {
+      ?source skos:related ?target .
+      BIND("related" AS ?relType)
+    }
+    ?source skos:prefLabel ?sourceLabel .
+    ?target skos:prefLabel ?targetLabel .
+    FILTER(LANG(?sourceLabel) = "de" || LANG(?sourceLabel) = "")
+    FILTER(LANG(?targetLabel) = "de" || LANG(?targetLabel) = "")
+  }
+`;
+
+// ─── SPARQL: Konzept-Details ───────────────────────────────────────────────
+const SPARQL_DETAIL = (iri) => `
+  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  SELECT ?def ?altLabel WHERE {
+    OPTIONAL { <${iri}> skos:definition ?def . FILTER(LANG(?def)="de"||LANG(?def)="") }
+    OPTIONAL { <${iri}> skos:altLabel   ?altLabel . FILTER(LANG(?altLabel)="de"||LANG(?altLabel)="") }
+  }
+`;
+
+// ─── Oxigraph ─────────────────────────────────────────────────────────────
+import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
+
+const statusEl    = document.getElementById('status');
+const nodeCountEl = document.getElementById('node-count');
+const edgeCountEl = document.getElementById('edge-count');
+const detailEl    = document.getElementById('detail');
+const titleEl     = document.getElementById('page-title');
+
+let cy;
+let globalStore;
+let allEdges = [];  // raw edge data for filtering
+
+// ─── Hilfsfunktionen ──────────────────────────────────────────────────────
+function shortIri(iri) { return iri.split(/[/#]/).pop() || iri; }
+function escHtml(s)    { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showError(msg) {
+  statusEl.innerHTML = `
+    <sl-alert variant="danger" open style="max-width:560px;margin:1rem;text-align:left;">
+      <sl-icon slot="icon" name="exclamation-octagon"></sl-icon>
+      ${escHtml(msg)}
+    </sl-alert>`;
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────
+async function main() {
+  await init();
+  const store = new Store();
+  globalStore = store;
+
+  try {
+    store.load(TTL_DATA, 'text/turtle', 'https://shop.example.org/glossary#');
+  } catch (e) { showError('TTL Parse-Fehler: ' + e.message); return; }
+
+  // Titel
+  try {
+    const tq = store.query(`
+      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+      PREFIX dct:  <http://purl.org/dc/terms/>
+      SELECT ?t WHERE {
+        { ?s a skos:ConceptScheme ; skos:prefLabel ?t }
+        UNION { ?s a skos:ConceptScheme ; dct:title ?t }
+      } LIMIT 1`);
+    for (const r of tq) { titleEl.textContent = r.get('t').value; break; }
+  } catch (_) {}
+
+  // Kanten laden
+  let rows;
+  try { rows = [...store.query(SPARQL_EDGES)]; }
+  catch (e) { showError('SPARQL-Fehler: ' + e.message); return; }
+
+  const { nodes, edges } = buildElements(rows);
+  allEdges = edges;
+
+  nodeCountEl.textContent = nodes.length + ' Konzepte';
+  edgeCountEl.textContent = edges.length + ' Relationen';
+
+  // Cytoscape initialisieren
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: { nodes, edges },
+    style: cyStyle(),
+    layout: getLayout('cose'),
+    minZoom: 0.08,
+    maxZoom: 6,
+    wheelSensitivity: 0.3
+  });
+
+  cy.on('tap', 'node', evt => showDetail(evt.target));
+  cy.on('tap', evt => { if (evt.target === cy) clearDetail(); });
+
+  statusEl.style.display = 'none';
+}
+
+// ─── Graphelemente bauen ──────────────────────────────────────────────────
+function buildElements(rows) {
+  const nodes = new Map();
+  const edges  = [];
+  const seen   = new Set();
+
+  for (const row of rows) {
+    const src    = row.get('source')?.value      ?? '';
+    const tgt    = row.get('target')?.value      ?? '';
+    const srcLbl = row.get('sourceLabel')?.value ?? shortIri(src);
+    const tgtLbl = row.get('targetLabel')?.value ?? shortIri(tgt);
+    const rel    = row.get('relType')?.value     ?? '';
+
+    if (src) nodes.set(src, { data: { id: src, label: srcLbl } });
+    if (tgt) nodes.set(tgt, { data: { id: tgt, label: tgtLbl } });
+
+    if (src && tgt) {
+      // Für "related" nur eine Richtung speichern (deduplizieren)
+      const eid = rel === 'related'
+        ? [src, tgt].sort().join('↔') + rel
+        : `${src}→${rel}→${tgt}`;
+      if (!seen.has(eid)) {
+        seen.add(eid);
+        edges.push({ data: { id: eid, source: src, target: tgt, label: rel, relType: rel } });
+      }
+    }
+  }
+  return { nodes: [...nodes.values()], edges };
+}
+
+// ─── Cytoscape Stil ───────────────────────────────────────────────────────
+function cyStyle() {
+  return [
+    { selector: 'node', style: {
+        'background-color': '#4f6ef7',
+        'label': 'data(label)',
+        'color': '#fff',
+        'text-valign': 'center', 'text-halign': 'center',
+        'font-size': '10px',
+        'width': 'label', 'height': 'label',
+        'padding': '9px', 'shape': 'roundrectangle',
+        'text-wrap': 'wrap', 'text-max-width': '130px',
+        'border-width': 0
+    }},
+    { selector: 'node:selected', style: {
+        'background-color': '#1e3fcc',
+        'border-width': 2.5, 'border-color': '#fff',
+        'shadow-blur': 12, 'shadow-color': '#4f6ef7', 'shadow-opacity': 0.5
+    }},
+    { selector: 'node.highlighted', style: {
+        'background-color': '#1e3fcc',
+        'border-width': 2.5, 'border-color': '#fff'
+    }},
+    { selector: 'node.faded', style: { 'opacity': 0.2 }},
+    { selector: 'edge', style: {
+        'width': 1.5,
+        'line-color': '#c0c8e0',
+        'target-arrow-color': '#c0c8e0',
+        'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier',
+        'label': 'data(label)',
+        'font-size': '8px', 'color': '#999',
+        'text-rotation': 'autorotate',
+        'text-margin-y': -6,
+        'text-background-color': '#fff',
+        'text-background-opacity': 0.7,
+        'text-background-padding': '2px'
+    }},
+    { selector: 'edge[relType="broader"]', style: {
+        'line-color': '#e07b54',
+        'target-arrow-color': '#e07b54',
+        'width': 2
+    }},
+    { selector: 'edge[relType="related"]', style: {
+        'line-color': '#54b0e0',
+        'target-arrow-color': '#54b0e0',
+        'target-arrow-shape': 'none',
+        'line-style': 'dashed',
+        'width': 1.2
+    }},
+    { selector: 'edge.faded', style: { 'opacity': 0.08 }},
+  ];
+}
+
+// ─── Layout-Optionen ──────────────────────────────────────────────────────
+function getLayout(name) {
+  const layouts = {
+    cose: {
+      name: 'cose', animate: true,
+      nodeRepulsion: () => 12000,
+      idealEdgeLength: () => 140,
+      gravity: 0.2,
+      numIter: 1200,
+      fit: true, padding: 40
+    },
+    breadthfirst: { name: 'breadthfirst', directed: true, spacingFactor: 1.4, padding: 40 },
+    circle:       { name: 'circle', padding: 40 },
+    concentric:   { name: 'concentric', concentric: n => n.degree(), levelWidth: () => 2, padding: 40 },
+    grid:         { name: 'grid', padding: 40 }
+  };
+  return layouts[name] || layouts.cose;
+}
+
+// ─── Detail-Panel ─────────────────────────────────────────────────────────
+async function showDetail(node) {
+  const iri   = node.id();
+  const label = node.data('label');
+
+  // Nachbar-Highlighting
+  cy.elements().removeClass('highlighted faded');
+  node.addClass('highlighted');
+  node.neighborhood().addClass('highlighted');
+  cy.elements().not(node.neighborhood().add(node)).addClass('faded');
+
+  let def = '';
+  const altLabels = [];
+
+  try {
+    const rows = [...globalStore.query(SPARQL_DETAIL(iri))];
+    for (const r of rows) {
+      if (r.get('def')?.value && !def)       def = r.get('def').value;
+      if (r.get('altLabel')?.value)           altLabels.push(r.get('altLabel').value);
+    }
+  } catch (_) {}
+
+  // Nachbarn sammeln
+  const broaderNeighbors  = [];
+  const relatedNeighbors  = [];
+  node.connectedEdges('[relType="broader"]').forEach(e => {
+    const other = e.source().id() === iri ? e.target() : e.source();
+    broaderNeighbors.push(other.data('label'));
+  });
+  node.connectedEdges('[relType="related"]').forEach(e => {
+    const other = e.source().id() === iri ? e.target() : e.source();
+    relatedNeighbors.push(other.data('label'));
+  });
+
+  const altBadges = [...new Set(altLabels)]
+    .map(a => `<sl-badge variant="neutral" pill>${escHtml(a)}</sl-badge>`)
+    .join(' ');
+
+  const broaderList = broaderNeighbors.length
+    ? broaderNeighbors.map(l => `<sl-badge variant="warning" pill>${escHtml(l)}</sl-badge>`).join(' ')
+    : '<span style="color:#ccc;font-size:.8rem;">–</span>';
+
+  const relatedList = relatedNeighbors.length
+    ? relatedNeighbors.map(l => `<sl-badge variant="primary" pill>${escHtml(l)}</sl-badge>`).join(' ')
+    : '<span style="color:#ccc;font-size:.8rem;">–</span>';
+
+  detailEl.innerHTML = `
+    <h2>${escHtml(label)}</h2>
+    <div class="iri">${escHtml(iri)}</div>
+    ${def ? `<div class="def">${escHtml(def)}</div>` : ''}
+    ${altLabels.length ? `<div class="section-head">Synonyme</div><div class="tag-list">${altBadges}</div>` : ''}
+    <div class="section-head">broader (Oberbegriff)</div>
+    <div class="tag-list">${broaderList}</div>
+    <div class="section-head">related (verwandt)</div>
+    <div class="tag-list">${relatedList}</div>
+  `;
+
+  detailEl.classList.remove('hidden');
+}
+
+function clearDetail() {
+  cy?.elements().removeClass('highlighted faded');
+  detailEl.innerHTML = '<p class="empty-msg">Klicke einen Knoten an, um Details zu sehen.</p>';
+}
+
+// ─── Toolbar-Events ───────────────────────────────────────────────────────
+document.getElementById('btn-fit').addEventListener('click', () => cy?.fit(undefined, 40));
+
+document.getElementById('btn-relayout').addEventListener('click', () => {
+  const sel = document.getElementById('layout-select').value;
+  cy?.layout(getLayout(sel)).run();
+});
+
+document.getElementById('btn-toggle-detail').addEventListener('click', () => {
+  detailEl.classList.toggle('hidden');
+});
+
+document.getElementById('layout-select').addEventListener('sl-change', evt => {
+  cy?.layout(getLayout(evt.target.value)).run();
+});
+
+// ─── Checkbox-Filter (broader / related) ─────────────────────────────────
+function applyEdgeFilter() {
+  if (!cy) return;
+  const showBroader = document.getElementById('cb-broader').checked;
+  const showRelated = document.getElementById('cb-related').checked;
+
+  cy.edges('[relType="broader"]').style('display', showBroader ? 'element' : 'none');
+  cy.edges('[relType="related"]').style('display', showRelated ? 'element' : 'none');
+
+  const visibleEdgeCount = cy.edges(':visible').length;
+  edgeCountEl.textContent = visibleEdgeCount + ' Relationen';
+}
+
+document.getElementById('cb-broader').addEventListener('sl-change', applyEdgeFilter);
+document.getElementById('cb-related').addEventListener('sl-change', applyEdgeFilter);
+
+// ─── Suche / Highlight ────────────────────────────────────────────────────
+document.getElementById('search-input').addEventListener('sl-input', evt => {
+  if (!cy) return;
+  const q = evt.target.value.trim().toLowerCase();
+  if (!q) { cy.elements().removeClass('faded highlighted'); return; }
+
+  cy.elements().addClass('faded');
+  const matched = cy.nodes().filter(n => n.data('label').toLowerCase().includes(q));
+  matched.removeClass('faded').addClass('highlighted');
+  matched.neighborhood().removeClass('faded');
+});
+
+document.getElementById('search-input').addEventListener('sl-clear', () => {
+  cy?.elements().removeClass('faded highlighted');
+});
+
+// ─── Starten ──────────────────────────────────────────────────────────────
+main().catch(err => showError(err.message));
+</script>
+</body>
+</html>

@@ -75,6 +75,7 @@ Das LLM muss **nicht mehr wissen** – es muss nur noch **fragen und erklären**
 ```
 .
 ├── README.md
+├── apps/                  # Generierte HTML-Visualisierungen des Knowledge Graphs
 ├── inputs/                # Rohdaten, die als Basis für die Graphgenerierung dienen
 │   └── ...                #   freie Struktur – Unterordner, Dateien, wie es passt
 ├── ontology/              # RDF-Ontologie der Fachdomäne (Turtle-Format)

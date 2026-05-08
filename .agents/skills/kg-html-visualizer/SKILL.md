@@ -15,6 +15,8 @@ Dieses Skill erzeugt **selbstständige Single-Page-HTML-Dateien**, die RDF/Turtl
 
 Die erzeugte HTML-Datei ist **komplett standalone**: alle Bibliotheken kommen von CDN, die TTL-Daten werden inline als JavaScript-String eingebettet. Kein Server nötig.
 
+> **Output-Verzeichnis:** Alle erzeugten HTML-Dateien werden im Ordner **`apps/`** (relativ zum Projekt-Root) gespeichert. Der Ordner wird bei Bedarf automatisch angelegt. Beispiel-Pfad: `apps/mein-glossar.html`.
+
 ## Schritt-für-Schritt-Workflow
 
 ### Schritt 1 – TTL-Dateien einlesen
@@ -52,14 +54,14 @@ node /workspace/.agents/skills/kg-html-visualizer/scripts/generate.js \
   --type table \
   --sparql "SELECT ?s ?label ?def WHERE { ?s a skos:Concept ; skos:prefLabel ?label ; skos:definition ?def }" \
   --title "Mein Glossar" \
-  --output output.html
+  --output apps/mein-glossar.html
 
 # Kraft-Graph
 node /workspace/.agents/skills/kg-html-visualizer/scripts/generate.js \
   --ttl input.ttl \
   --type graph \
   --title "Konzept-Netzwerk" \
-  --output output.html
+  --output apps/konzept-netzwerk.html
 ```
 
 Alternativ: Den Template-Inhalt direkt im Agenten per LLM anpassen (Inline-Ansatz, kein Node nötig – bevorzugt bei komplexen individuellen Anforderungen).
@@ -72,7 +74,8 @@ Der Agent liest ein passendes Template, ersetzt die Platzhalter direkt im Code u
 2. `__TTL_DATA__` durch den Base64-kodierten oder raw-escaped TTL-String ersetzen
 3. `__SPARQL_QUERY__` durch die fertige Query ersetzen
 4. `__PAGE_TITLE__` durch den gewünschten Titel ersetzen
-5. Mit `write` als `.html` speichern
+5. Mit `write` als `.html` in **`apps/`** speichern – z. B. `apps/mein-glossar.html`
+   (Ordner anlegen falls nötig: `bash mkdir -p apps`)
 
 ## Template-Bibliotheken (CDN, kein Install)
 
