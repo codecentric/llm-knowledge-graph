@@ -2,6 +2,36 @@
 
 Version: **0.3.x** (CDN: `https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js`)
 
+## ⚠️ TTL-Daten niemals inline einbetten
+
+RDF/Turtle-Daten dürfen **niemals** als JavaScript-String-Literal in die HTML-Datei geschrieben werden.
+Sonderzeichen (€, –, Umlaute, Anführungszeichen, Backticks) in TTL-Dateien führen unweigerlich zu
+`SyntaxError: Invalid or unexpected token` oder `Identifier already declared`.
+
+**Immer** per `fetch()` laden:
+
+```js
+async function fetchTtl(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`Konnte ${path} nicht laden (HTTP ${res.status})`);
+  return res.text();
+}
+
+// Einzelne Datei
+const ttl = await fetchTtl('../graph/glossary.ttl');
+
+// Mehrere Dateien parallel
+const [ttl1, ttl2] = await Promise.all([
+  fetchTtl('../graph/versand.ttl'),
+  fetchTtl('../graph/glossary.ttl'),
+]);
+```
+
+> Die fertigen HTML-Dateien müssen deshalb über einen Webserver ausgeliefert werden –
+> `file://`-Protokoll blockiert `fetch()`. Lokaler Start: `npm run serve` im Workspace-Root.
+
+---
+
 ## Initialisierung (ES-Modul)
 
 ```html
@@ -11,10 +41,10 @@ import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js
 async function main() {
   await init(); // WASM laden – MUSS vor allem anderen aufgerufen werden
 
-  const store = new Store();
+  const ttl = await fetchTtl('../graph/meine-daten.ttl');
 
-  // Turtle einladen
-  store.load(TTL_STRING, { format: 'text/turtle', baseIri: 'https://example.org/' });
+  const store = new Store();
+  store.load(ttl, 'text/turtle', 'https://example.org/');
 
   // SPARQL SELECT
   const results = store.query(`
@@ -31,15 +61,33 @@ main().catch(console.error);
 </script>
 ```
 
+---
+
+## store.load() – korrekte Signatur
+
+```js
+// ✅ RICHTIG – Positional-Parameter (verifiziert gegen oxigraph@0.3.10 WASM-Code):
+store.load(data, mimeType, baseIri);
+
+// Beispiele:
+store.load(ttlString, 'text/turtle', 'https://shop.example.org/');
+store.load(nqString,  'application/n-quads', 'https://example.org/');
+
+// ❌ FALSCH – Objekt-Schreibweise funktioniert nicht und wirft "Not supported MIME type":
+store.load(data, { format: 'text/turtle', baseIri: '...' });  // NICHT VERWENDEN
+```
+
+---
+
 ## Store-Methoden
 
 | Methode | Beschreibung |
 |---------|-------------|
-| `store.load(data, { format, baseIri })` | Triples laden. Format: `'text/turtle'`, `'application/n-triples'`, `'application/ld+json'` |
+| `store.load(data, mimeType, baseIri)` | Triples laden. mimeType z. B. `'text/turtle'`, `'application/n-triples'`, `'application/ld+json'` |
 | `store.query(sparql)` | SELECT/ASK/CONSTRUCT/DESCRIBE ausführen |
 | `store.update(sparql)` | INSERT/DELETE ausführen |
 | `store.size` | Anzahl der Triples |
-| `store.dump({ format })` | Serialisiert den gesamten Store |
+| `store.dump(mimeType)` | Serialisiert den gesamten Store |
 
 ## Ergebnis-Iteration (SELECT)
 
@@ -60,16 +108,20 @@ for (const row of results) {
 ## Mehrere TTL-Dateien laden
 
 ```js
-// Einfach nacheinander aufrufen – Store akkumuliert
-store.load(ttl1, { format: 'text/turtle', baseIri: 'https://base.org/' });
-store.load(ttl2, { format: 'text/turtle', baseIri: 'https://base.org/' });
+// Parallel fetchen, dann nacheinander in denselben Store laden – Store akkumuliert:
+const [ttl1, ttl2] = await Promise.all([
+  fetchTtl('../graph/versand.ttl'),
+  fetchTtl('../graph/glossary.ttl'),
+]);
+store.load(ttl1, 'text/turtle', 'https://shop.example.org/versand');
+store.load(ttl2, 'text/turtle', 'https://shop.example.org/glossary');
 ```
 
 ## Fehlerbehandlung
 
 ```js
 try {
-  store.load(ttlString, { format: 'text/turtle' });
+  store.load(ttlString, 'text/turtle', 'https://example.org/');
 } catch (e) {
   console.error('Parse error:', e.message);
 }
@@ -90,16 +142,22 @@ try {
 <script type="module">
 import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
 
+async function fetchTtl(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`Konnte ${path} nicht laden (HTTP ${res.status})`);
+  return res.text();
+}
+
 const spinner = document.getElementById('spinner');
 const app     = document.getElementById('app');
 
 async function main() {
   await init();
 
+  const ttl   = await fetchTtl('../graph/meine-daten.ttl');
   const store = new Store();
-  store.load(TTL_DATA, { format: 'text/turtle', baseIri: 'https://example.org/' });
+  store.load(ttl, 'text/turtle', 'https://example.org/');
 
-  // UI rendern
   render(store);
 
   spinner.style.display = 'none';
@@ -121,7 +179,8 @@ main().catch(err => {
 ## Häufige Fallstricke
 
 - `init()` **muss** `await`-ed werden, bevor `new Store()` aufgerufen wird
+- TTL **niemals** als JS-String-Literal einbetten – immer `fetch()` verwenden (siehe oben)
+- `store.load()` erwartet **Positional-Parameter**, kein Options-Objekt
 - CDN-URL für WASM muss das Modul exportieren – `jsdelivr` mit dem exakten Pfad `/web.js` funktioniert
-- Bei sehr großen TTL-Strings (> 5 MB) kann das Parsing einige Sekunden dauern → Ladeindikator zeigen
+- Bei sehr großen TTL-Dateien (> 5 MB) kann das Parsing einige Sekunden dauern → Ladeindikator zeigen
 - `store.query()` gibt ein Iterable zurück – kein Array; für zufälligen Zugriff: `[...results]`
-- Backticks im eingebetteten TTL-String müssen escapt werden: `` ` `` → `` \` ``
