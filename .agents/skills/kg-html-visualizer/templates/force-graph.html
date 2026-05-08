@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>__PAGE_TITLE__</title>
+
+  <!-- Shoelace -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+
+  <!-- Cytoscape -->
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+
+  <style>
+    :root { --sl-color-primary-600: #4f6ef7; }
+    * { box-sizing: border-box; }
+    body { font-family: var(--sl-font-sans); margin: 0; background: #f5f7fb; color: #1a1a2e; display: flex; flex-direction: column; height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2a2a5a 100%);
+      color: #fff; padding: 1rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 1.3rem; flex: 1; }
+
+    .toolbar {
+      display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+      padding: .6rem 1rem; background: #fff; border-bottom: 1px solid #e4e7f0;
+    }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    #cy-wrap { flex: 1; position: relative; }
+    #cy      { width: 100%; height: 100%; background: #ffffff; }
+
+    #detail {
+      width: 300px; border-left: 1px solid #e4e7f0; background: #fff;
+      padding: 1rem; overflow-y: auto; font-size: .88rem;
+      transition: width .2s;
+    }
+    #detail.hidden { width: 0; padding: 0; overflow: hidden; border: none; }
+    #detail h2  { font-size: 1rem; margin: 0 0 .5rem; }
+    #detail .iri { font-size: .75rem; color: #888; word-break: break-all; margin-bottom: .75rem; }
+    #detail .prop { margin: .4rem 0; }
+    #detail .prop strong { display: block; font-size: .75rem; color: #888; }
+
+    #legend {
+      position: absolute; bottom: 12px; left: 12px;
+      background: rgba(255,255,255,.92); border-radius: 8px;
+      padding: .5rem .75rem; font-size: .78rem; line-height: 1.8;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+    .leg-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+    .leg-line { display: inline-block; width: 20px; height: 2px; vertical-align: middle; margin-right: 4px; }
+
+    #status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; z-index: 10; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 id="page-title">__PAGE_TITLE__</h1>
+  <sl-badge id="node-count" variant="neutral">– Knoten</sl-badge>
+  <sl-badge id="edge-count" variant="neutral">– Kanten</sl-badge>
+</header>
+
+<div class="toolbar">
+  <sl-button size="small" id="btn-fit">
+    <sl-icon slot="prefix" name="arrows-fullscreen"></sl-icon> Fit
+  </sl-button>
+  <sl-button size="small" id="btn-relayout">
+    <sl-icon slot="prefix" name="shuffle"></sl-icon> Neu anordnen
+  </sl-button>
+  <sl-button size="small" id="btn-toggle-detail">
+    <sl-icon slot="prefix" name="layout-sidebar-reverse"></sl-icon> Details
+  </sl-button>
+  <sl-select id="layout-select" size="small" value="cose" style="width:160px;">
+    <sl-option value="cose">CoSE (Kraft)</sl-option>
+    <sl-option value="breadthfirst">Breadth-first</sl-option>
+    <sl-option value="circle">Kreis</sl-option>
+    <sl-option value="concentric">Konzentrisch</sl-option>
+    <sl-option value="grid">Grid</sl-option>
+  </sl-select>
+</div>
+
+<div id="main">
+  <div id="cy-wrap">
+    <div id="status">
+      <sl-spinner style="font-size:2.5rem;"></sl-spinner>
+      <p style="color:#888;margin-top:.75rem;">Lade Wissensgraph …</p>
+    </div>
+    <div id="cy"></div>
+    <div id="legend">
+      <div><span class="leg-dot" style="background:#e07b54;"></span> broader</div>
+      <div><span class="leg-dot" style="background:#4f6ef7;"></span> Knoten</div>
+      <div style="color:#54b0e0;"><span class="leg-line" style="background:#54b0e0; border-top: 2px dashed #54b0e0;"></span> related</div>
+      <div><span class="leg-line" style="background:#6fcb97;"></span> subClassOf</div>
+    </div>
+  </div>
+  <div id="detail">
+    <p style="color:#aaa;font-size:.85rem;margin:0;">Klicke einen Knoten an, um Details zu sehen.</p>
+  </div>
+</div>
+
+<script type="module">
+// ─── Eingebettete TTL-Daten ────────────────────────────────────────────────
+const TTL_DATA = `__TTL_DATA__`;
+
+// ─── SPARQL-Query (Kanten: ?source ?sourceLabel ?target ?targetLabel ?relType)
+const SPARQL = `__SPARQL_QUERY__`;
+
+// ─── Oxigraph ─────────────────────────────────────────────────────────────
+import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
+
+const statusEl     = document.getElementById('status');
+const nodeCountEl  = document.getElementById('node-count');
+const edgeCountEl  = document.getElementById('edge-count');
+const detailEl     = document.getElementById('detail');
+const titleEl      = document.getElementById('page-title');
+
+let cy;
+
+async function main() {
+  await init();
+  const store = new Store();
+
+  try {
+    store.load(TTL_DATA, { format: 'text/turtle', baseIri: 'https://example.org/' });
+  } catch (e) { showError('TTL Parse-Fehler: ' + e.message); return; }
+
+  // Titel aus Graph
+  try {
+    const tq = store.query(`
+      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+      PREFIX dct:  <http://purl.org/dc/terms/>
+      SELECT ?t WHERE {
+        { ?s a skos:ConceptScheme ; skos:prefLabel ?t }
+        UNION { ?s a skos:ConceptScheme ; dct:title ?t }
+      } LIMIT 1
+    `);
+    for (const r of tq) { titleEl.textContent = r.get('t').value; break; }
+  } catch (_) {}
+
+  let rows;
+  try { rows = [...store.query(SPARQL)]; }
+  catch (e) { showError('SPARQL-Fehler: ' + e.message); return; }
+
+  const { nodes, edges } = buildElements(rows);
+
+  nodeCountEl.textContent = nodes.length + ' Knoten';
+  edgeCountEl.textContent = edges.length + ' Kanten';
+
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: { nodes, edges },
+    style: cyStyle(),
+    layout: getLayout('cose'),
+    minZoom: 0.1,
+    maxZoom: 5
+  });
+
+  cy.on('tap', 'node', evt => showDetail(evt.target, store));
+  cy.on('tap', evt => { if (evt.target === cy) clearDetail(); });
+
+  statusEl.style.display = 'none';
+}
+
+function buildElements(rows) {
+  const nodes = new Map();
+  const edges = [];
+  const seen  = new Set();
+
+  for (const row of rows) {
+    const src    = row.get('source')?.value      ?? '';
+    const tgt    = row.get('target')?.value      ?? '';
+    const srcLbl = row.get('sourceLabel')?.value ?? shortIri(src);
+    const tgtLbl = row.get('targetLabel')?.value ?? shortIri(tgt);
+    const rel    = row.get('relType')?.value     ?? '';
+
+    if (src) nodes.set(src, { data: { id: src, label: srcLbl } });
+    if (tgt) nodes.set(tgt, { data: { id: tgt, label: tgtLbl } });
+
+    if (src && tgt) {
+      const eid = `${src}→${rel}→${tgt}`;
+      if (!seen.has(eid)) {
+        seen.add(eid);
+        edges.push({ data: { id: eid, source: src, target: tgt, label: rel, relType: rel } });
+      }
+    }
+  }
+  return { nodes: [...nodes.values()], edges };
+}
+
+function cyStyle() {
+  return [
+    { selector: 'node', style: {
+        'background-color': '#4f6ef7', 'label': 'data(label)',
+        'color': '#fff', 'text-valign': 'center', 'text-halign': 'center',
+        'font-size': '10px', 'width': 'label', 'height': 'label',
+        'padding': '8px', 'shape': 'roundrectangle',
+        'text-wrap': 'wrap', 'text-max-width': '120px'
+    }},
+    { selector: 'node:selected', style: {
+        'background-color': '#1e3fcc', 'border-width': 2, 'border-color': '#fff'
+    }},
+    { selector: 'edge', style: {
+        'width': 1.5, 'line-color': '#c0c8e0',
+        'target-arrow-color': '#c0c8e0', 'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier', 'label': 'data(label)',
+        'font-size': '8px', 'color': '#888', 'text-rotation': 'autorotate',
+        'text-margin-y': -6
+    }},
+    { selector: 'edge[relType="broader"]', style: {
+        'line-color': '#e07b54', 'target-arrow-color': '#e07b54'
+    }},
+    { selector: 'edge[relType="related"]', style: {
+        'line-color': '#54b0e0', 'target-arrow-color': '#54b0e0', 'line-style': 'dashed'
+    }},
+    { selector: 'edge[relType="narrower"]', style: {
+        'line-color': '#e0b454', 'target-arrow-color': '#e0b454'
+    }},
+    { selector: 'edge[relType="subClassOf"]', style: {
+        'line-color': '#6fcb97', 'target-arrow-color': '#6fcb97'
+    }},
+  ];
+}
+
+function getLayout(name) {
+  const layouts = {
+    cose:         { name: 'cose', animate: true, nodeRepulsion: () => 8000, idealEdgeLength: () => 120, gravity: 0.25, numIter: 1000 },
+    breadthfirst: { name: 'breadthfirst', directed: true, spacingFactor: 1.5 },
+    circle:       { name: 'circle' },
+    concentric:   { name: 'concentric', concentric: n => n.degree(), levelWidth: () => 2 },
+    grid:         { name: 'grid' }
+  };
+  return layouts[name] || layouts.cose;
+}
+
+function showDetail(node, store) {
+  const iri = node.id();
+  let html  = `<h2>${escHtml(node.data('label'))}</h2><div class="iri">${escHtml(iri)}</div>`;
+
+  // Eigenschaften aus Store holen
+  try {
+    const props = [...store.query(`
+      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      SELECT ?p ?o WHERE { <${iri}> ?p ?o . FILTER(!isBlank(?o)) }
+    `)];
+    for (const r of props) {
+      const p = shortIri(r.get('p').value);
+      const o = r.get('o').value;
+      html += `<div class="prop"><strong>${escHtml(p)}</strong>${escHtml(o)}</div>`;
+    }
+  } catch (_) {}
+
+  detailEl.innerHTML = html;
+  detailEl.classList.remove('hidden');
+}
+
+function clearDetail() {
+  detailEl.innerHTML = '<p style="color:#aaa;font-size:.85rem;margin:0;">Klicke einen Knoten an, um Details zu sehen.</p>';
+}
+
+// Toolbar-Buttons
+document.getElementById('btn-fit').addEventListener('click', () => cy?.fit());
+document.getElementById('btn-relayout').addEventListener('click', () => {
+  const sel = document.getElementById('layout-select').value;
+  cy?.layout(getLayout(sel)).run();
+});
+document.getElementById('btn-toggle-detail').addEventListener('click', () => {
+  detailEl.classList.toggle('hidden');
+});
+document.getElementById('layout-select').addEventListener('sl-change', evt => {
+  cy?.layout(getLayout(evt.target.value)).run();
+});
+
+function shortIri(iri) { return iri.split(/[/#]/).pop() || iri; }
+function escHtml(s)    { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showError(msg) {
+  statusEl.innerHTML = `<sl-alert variant="danger" open style="max-width:560px;text-align:left;">${escHtml(msg)}</sl-alert>`;
+}
+
+main().catch(err => showError(err.message));
+</script>
+</body>
+</html>

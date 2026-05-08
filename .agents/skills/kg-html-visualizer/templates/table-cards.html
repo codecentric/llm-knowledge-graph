@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>__PAGE_TITLE__</title>
+
+  <!-- Shoelace -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+
+  <style>
+    :root { --sl-color-primary-600: #4f6ef7; }
+    body { font-family: var(--sl-font-sans); margin: 0; padding: 0; background: #f5f7fb; color: #1a1a2e; }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2a2a5a 100%);
+      color: #fff; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    header h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+    header p  { margin: 0; opacity: .7; font-size: .9rem; }
+
+    .toolbar {
+      display: flex; gap: .75rem; align-items: center; flex-wrap: wrap;
+      padding: 1rem 2rem; background: #fff; border-bottom: 1px solid #e4e7f0;
+    }
+    sl-input { flex: 1; min-width: 200px; }
+
+    #card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+      padding: 1.5rem 2rem;
+    }
+
+    sl-card {
+      --border-radius: 10px;
+      transition: transform .15s, box-shadow .15s;
+    }
+    sl-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+
+    .card-title {
+      font-weight: 600; font-size: 1rem; margin-bottom: .35rem;
+      display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    }
+    .card-def { font-size: .85rem; color: #555; line-height: 1.5; margin: .5rem 0 0; }
+    .tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .6rem; }
+
+    #status { padding: 2rem; text-align: center; }
+    #count  { font-size: .85rem; color: #888; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 id="page-title">__PAGE_TITLE__</h1>
+  <p id="page-subtitle">Knowledge Graph Visualizer</p>
+</header>
+
+<div class="toolbar">
+  <sl-input id="search" placeholder="Suchen …" clearable size="small">
+    <sl-icon slot="prefix" name="search"></sl-icon>
+  </sl-input>
+  <sl-badge id="count" variant="neutral">– Konzepte</sl-badge>
+</div>
+
+<div id="status">
+  <sl-spinner style="font-size:2rem;"></sl-spinner>
+  <p style="color:#888;margin-top:.5rem;">Lade Wissensgraph …</p>
+</div>
+
+<div id="card-grid" style="display:none;"></div>
+
+<script type="module">
+// ─── Eingebettete TTL-Daten ────────────────────────────────────────────────
+const TTL_DATA = `__TTL_DATA__`;
+
+// ─── SPARQL-Query ──────────────────────────────────────────────────────────
+const SPARQL = `__SPARQL_QUERY__`;
+
+// ─── Oxigraph ─────────────────────────────────────────────────────────────
+import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
+
+const statusEl  = document.getElementById('status');
+const gridEl    = document.getElementById('card-grid');
+const countEl   = document.getElementById('count');
+const searchEl  = document.getElementById('search');
+const titleEl   = document.getElementById('page-title');
+
+let allCards = [];
+
+async function main() {
+  await init();
+  const store = new Store();
+
+  try {
+    store.load(TTL_DATA, { format: 'text/turtle', baseIri: 'https://example.org/' });
+  } catch (e) {
+    showError('TTL Parse-Fehler: ' + e.message);
+    return;
+  }
+
+  // Optionaler Titel aus dem Graphen
+  try {
+    const titleQ = store.query(`
+      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+      PREFIX dct:  <http://purl.org/dc/terms/>
+      SELECT ?t WHERE {
+        { ?s a skos:ConceptScheme ; skos:prefLabel ?t }
+        UNION { ?s a skos:ConceptScheme ; dct:title ?t }
+      } LIMIT 1
+    `);
+    for (const r of titleQ) { titleEl.textContent = r.get('t').value; break; }
+  } catch (_) {}
+
+  let rows;
+  try {
+    rows = [...store.query(SPARQL)];
+  } catch (e) {
+    showError('SPARQL-Fehler: ' + e.message);
+    return;
+  }
+
+  allCards = rows.map(row => {
+    const obj = {};
+    for (const [key] of row) { obj[key] = row.get(key)?.value ?? ''; }
+    return obj;
+  });
+
+  renderCards(allCards);
+  statusEl.style.display = 'none';
+  gridEl.style.display   = 'grid';
+}
+
+function renderCards(items) {
+  gridEl.innerHTML = '';
+  countEl.textContent = items.length + ' Konzepte';
+  items.forEach(item => {
+    const label  = item.label  || item.name  || shortIri(item.concept || item.s || '');
+    const def    = item.definition || item.comment || item.description || '';
+    const alts   = item.altLabels ? item.altLabels.split('|').filter(Boolean) : [];
+    const iri    = item.concept   || item.s || '';
+
+    const card = document.createElement('sl-card');
+    card.dataset.label = label.toLowerCase();
+    card.dataset.def   = def.toLowerCase();
+
+    const tags = alts.map(a => `<sl-badge variant="neutral" pill>${escHtml(a)}</sl-badge>`).join('');
+
+    card.innerHTML = `
+      <div class="card-title">
+        <span>${escHtml(label)}</span>
+      </div>
+      ${def ? `<p class="card-def">${escHtml(def)}</p>` : ''}
+      ${tags ? `<div class="tags">${tags}</div>` : ''}
+      <div slot="footer" style="font-size:.75rem;color:#aaa;word-break:break-all;">${escHtml(shortIri(iri))}</div>
+    `;
+    gridEl.appendChild(card);
+  });
+}
+
+searchEl.addEventListener('sl-input', () => {
+  const q = searchEl.value.toLowerCase().trim();
+  const filtered = q
+    ? allCards.filter(c => {
+        const lbl = (c.label || c.name || '').toLowerCase();
+        const def = (c.definition || c.comment || '').toLowerCase();
+        const alt = (c.altLabels || '').toLowerCase();
+        return lbl.includes(q) || def.includes(q) || alt.includes(q);
+      })
+    : allCards;
+  renderCards(filtered);
+});
+
+function shortIri(iri) {
+  return iri.split(/[/#]/).pop() || iri;
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showError(msg) {
+  statusEl.innerHTML = `<sl-alert variant="danger" open style="text-align:left;max-width:600px;margin:auto;">${escHtml(msg)}</sl-alert>`;
+}
+
+main().catch(err => showError(err.message));
+</script>
+</body>
+</html>
