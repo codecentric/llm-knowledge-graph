@@ -37,7 +37,19 @@ find graph -name "*.ttl" -o -name "*.rdf" -o -name "*.n3"
 
 Bei jeder inhaltlichen Frage **immer diese Reihenfolge einhalten**:
 
-### 🥇 Primär: Semantische Abfrage (Typ + Objektreferenz)
+### 🥇 Schritt 0: Vorhandene Queries prüfen
+
+Bevor eine neue Abfrage formuliert wird, prüfen ob bereits eine passende `.rq`-Datei existiert:
+
+```bash
+find queries -name "*.rq"
+```
+
+- Passt eine Query **direkt** → ausführen
+- Passt sie **teilweise** → anpassen und als neue `.rq`-Datei speichern (Original nicht überschreiben)
+- Keine passende Query → weiter mit Schritt 1
+
+### 🥈 Schritt 1: Semantische Abfrage (Typ + Objektreferenz)
 
 1. **Klassen und Eigenschaften im Graph ermitteln** – welche `owl:Class`-Instanzen und `rdf:type`-Verwendungen existieren?
 
@@ -64,7 +76,7 @@ SELECT DISTINCT ?klasse ?label WHERE {
 FILTER(CONTAINS(LCASE(STR(?s)), "uk"))
 ```
 
-### 🥈 Fallback: Textbasierte Suche
+### 🥉 Fallback: Textbasierte Suche
 
 Nur verwenden wenn:
 - die gesuchte Entität **nicht als benanntes Individuum** im Graph existiert
@@ -79,7 +91,7 @@ SELECT ?s ?p ?o WHERE {
 } LIMIT 20
 ```
 
-> **Merkrege:** Erst den Graph nach seiner eigenen Struktur fragen,
+> **Merkregel:** Erst vorhandene Queries prüfen, dann den Graph nach seiner eigenen Struktur fragen,
 > dann entlang dieser Struktur navigieren.
 
 ---
