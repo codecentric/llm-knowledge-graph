@@ -1,9 +1,13 @@
 {
   "scripts": {
     "query": "node run-query.mjs",
-    "validate": "node .agents/skills/sparql-query/scripts/validate.js"
+    "validate": "node .agents/skills/sparql-query/scripts/validate.js",
+    "serve": "serve . -p 4000"
   },
   "dependencies": {
     "@comunica/query-sparql-file": "^5.2.2"
+  },
+  "devDependencies": {
+    "serve": "^14.2.6"
   }
 }
