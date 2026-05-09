@@ -279,6 +279,47 @@ Bei Fehlern: Exit-Code 1, Ausgabe zeigt betroffene Datei und Fehlermeldung.
 
 ---
 
+## SHACL-Validierung – Geschäftsregeln prüfen
+
+Prüft alle `sh:NodeShape`-Constraints gegen die Graphdaten:
+
+```bash
+# Alle graph/*.ttl prüfen (Standard)
+node .agents/skills/sparql-query/scripts/validate-shacl.js
+
+# Nur eine Datei
+node .agents/skills/sparql-query/scripts/validate-shacl.js graph/versand.ttl
+
+# Mehrere Dateien
+node .agents/skills/sparql-query/scripts/validate-shacl.js graph/versand.ttl graph/glossary.ttl
+
+# Als npm-Skript
+npm run validate:shacl
+```
+
+### Optionen
+
+| Option | Beschreibung | Standard |
+|--------|-------------|----------|
+| `--format table\|json` | Ausgabeformat | `table` |
+| `--severity violation\|warning\|info` | Schwelle für angezeigte Befunde | `info` |
+| `--fail-on violation\|warning\|info` | Exit-Code 1 ab diesem Schweregrad | `violation` |
+
+### Unterstützte Constraint-Typen
+
+| Typ | Implementierung | Beispiel |
+|-----|----------------|----------|
+| `sh:property` (minCount, datatype, minInclusive …) | `rdf-validate-shacl` | `versand:AufpreisShape` |
+| `sh:sparql` (SPARQLConstraintComponent) | Comunica | `versand:SperrgutVersandShape` |
+
+### Automatische Validierung durch die Extension
+
+Die Extension `shacl-guard.ts` läuft im Hintergrund: Nach jedem `write`- oder
+`edit`-Call auf eine `.ttl`-Datei wird `validate-shacl.js` automatisch ausgeführt.
+Violations werden dem Agenten als Fehler angezeigt, Warnings als Hinweis.
+
+---
+
 ## Fehlerbehebung
 
 | Fehler | Ursache / Lösung |

@@ -46,6 +46,25 @@ Der Browser lädt alle TTL-Dateien aus `graph/` per SPARQL, zeigt Konzepte, Klas
 
 > Nur in pi verfügbar (nutzt `ctx.ui.custom()` für das TUI-Overlay und `pi.registerShortcut()`)
 
+#### `shacl-guard` – Automatische SHACL-Validierung nach Schreiboperationen
+
+Führt nach jeder `write`- oder `edit`-Operation auf einer `.ttl`-Datei **automatisch die SHACL-Validierung** durch und konfrontiert den Agenten sofort mit Verstößen – bevor er mit der nächsten Aktion fortfährt.
+
+```
+Agent schreibt graph/versand.ttl  (write oder edit)
+  → shacl-guard startet validate-shacl.js
+  → sh:Violation → isError: true   (Agent muss korrigieren)
+  → sh:Warning   → isError: false  (Hinweis, kein harter Fehler)
+  → konform      → ✅-Meldung, kein Rauschen
+```
+
+Das Validierungsscript liegt unter:
+```
+.agents/skills/sparql-query/scripts/validate-shacl.js
+```
+
+> Nur in pi verfügbar – der `tool_result`-Hook, über den die Extension das Ergebnis eines Tool-Calls abfängt und ergänzt, existiert in Claude Code oder Cursor nicht.
+
 #### `kg-mention` – `#Konzept`-Syntax im Editor
 
 Ermöglicht `#Label`-Mentions direkt beim Schreiben einer Frage. Zwei Mechanismen:
@@ -113,6 +132,7 @@ pi lädt `AGENTS.md` automatisch als Systemkontext. Darin steht das **Graph-firs
 | `AGENTS.md` als Systemkontext | ✅ automatisch | ✅ (Claude Code liest es auch) |
 | Skills aus `.agents/skills/` | ✅ native Unterstützung | ⚠️ nur wenn Agent die Dateien manuell liest |
 | `graph-gate` Extension aktiv | ✅ blockiert `read` auf TTL | ❌ kein Intercept-Mechanismus |
+| `shacl-guard` Extension aktiv | ✅ SHACL-Check nach jedem TTL-Schreibvorgang | ❌ kein `tool_result`-Hook |
 | SPARQL-Abfrage-Workflow | ✅ durch Extension erzwungen | ⚠️ muss manuell per Prompt angewiesen werden |
 | Vorgefertigte `.rq`-Queries in `queries/` | ✅ Agent kennt sie via Skill | ⚠️ Agent findet sie nur wenn er danach sucht |
 | `kg-browser` (TUI-Overlay, `Alt+K`) | ✅ interaktiver Graph-Browser | ❌ kein TUI-Overlay-Mechanismus |

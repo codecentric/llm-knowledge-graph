@@ -6,11 +6,13 @@ on:
       - "graph/**"
       - "queries/**"
       - ".agents/skills/sparql-query/scripts/validate.js"
+      - ".agents/skills/sparql-query/scripts/validate-shacl.js"
   pull_request:
     paths:
       - "graph/**"
       - "queries/**"
       - ".agents/skills/sparql-query/scripts/validate.js"
+      - ".agents/skills/sparql-query/scripts/validate-shacl.js"
   workflow_dispatch:
 
 jobs:
@@ -37,3 +39,6 @@ jobs:
 
       - name: Run validation
         run: npm run validate
+
+      - name: Run SHACL validation
+        run: npm run validate:shacl
