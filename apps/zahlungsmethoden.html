@@ -38,6 +38,15 @@
     header .icon { font-size: 1.8rem; }
     header h1 { margin: 0; font-size: 1.35rem; flex: 1; }
     header p  { margin: .2rem 0 0; font-size: .85rem; opacity: .75; flex-basis: 100%; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: .35rem;
+      color: rgba(255,255,255,.75); font-size: .8rem; text-decoration: none;
+      padding: .2rem .55rem; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.25);
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .back-link:hover { background: rgba(255,255,255,.15); color: #fff; }
 
     /* ── Toolbar ── */
     .toolbar {
@@ -159,6 +168,7 @@
 <body>
 
 <header>
+  <a class="back-link" href="../index.html">&#8592; Übersicht</a>
   <span class="icon">💳</span>
   <h1>Zahlungsmethoden &amp; Zahlungsregeln</h1>
   <p>Knowledge Graph – Shop Checkout · Quelle: meeting-checkout-versand.md · Stand: 2024-03-05</p>

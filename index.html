@@ -66,6 +66,7 @@
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1.25rem;
       margin-bottom: 3rem;
+      min-height: 120px;
     }
 
     .app-card {
@@ -85,24 +86,18 @@
       box-shadow: 0 10px 30px rgba(0,0,0,.1);
       border-color: var(--brand-accent);
     }
-    .app-card .icon {
-      font-size: 2rem;
-      line-height: 1;
-    }
-    .app-card h3 {
-      margin: 0;
-      font-size: 1.05rem;
-      font-weight: 700;
-    }
-    .app-card p {
-      margin: 0;
-      font-size: .875rem;
+    .app-card .icon { font-size: 2rem; line-height: 1; }
+    .app-card h3   { margin: 0; font-size: 1.05rem; font-weight: 700; }
+    .app-card p    { margin: 0; font-size: .875rem; color: #64748b; line-height: 1.5; }
+    .app-card .badge { margin-top: auto; padding-top: .6rem; }
+
+    #status {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
       color: #64748b;
-      line-height: 1.5;
-    }
-    .app-card .badge {
-      margin-top: auto;
-      padding-top: .6rem;
+      font-size: .875rem;
+      margin-bottom: 1rem;
     }
 
     footer {
@@ -130,43 +125,12 @@
 <main>
   <h2>Anwendungen</h2>
 
-  <div class="app-grid">
-    <a class="app-card" href="apps/glossar.html">
-      <div class="icon">📚</div>
-      <h3>Fachglossar</h3>
-      <p>
-        Alle Konzepte des Shop-Wissengraphen als interaktives
-        Netzwerk – Definitionen, Beziehungen und Kategorien.
-      </p>
-      <div class="badge">
-        <sl-badge variant="primary" pill>Glossar · Ontologie</sl-badge>
-      </div>
-    </a>
-
-    <a class="app-card" href="apps/versand.html">
-      <div class="icon">🚚</div>
-      <h3>Versanddomäne</h3>
-      <p>
-        Carrier, Versandoptionen, Länderbeschränkungen und
-        Lieferzeiten – tabellarisch und als Graphansicht.
-      </p>
-      <div class="badge">
-        <sl-badge variant="success" pill>Versand · Regeln</sl-badge>
-      </div>
-    </a>
-
-    <a class="app-card" href="apps/offene-fragen.html">
-      <div class="icon">❓</div>
-      <h3>Offene Fragen</h3>
-      <p>
-        Ungeklärte Anforderungen, Widersprüche und fehlende
-        Daten im Knowledge Graph – priorisiert nach Schwere.
-      </p>
-      <div class="badge">
-        <sl-badge variant="warning" pill>Qualität · Lücken</sl-badge>
-      </div>
-    </a>
+  <div id="status">
+    <sl-spinner></sl-spinner>
+    <span>Lade Apps aus Knowledge Graph …</span>
   </div>
+
+  <div class="app-grid" id="app-grid"></div>
 
   <h2>Über dieses Projekt</h2>
   <sl-card style="max-width: 680px;">
@@ -174,7 +138,8 @@
       Dieser Knowledge Graph modelliert die Fachdomäne eines fiktiven Online-Shops als
       RDF-Ontologie. Alle Daten liegen als Turtle-Dateien im Verzeichnis <code>graph/</code>
       und werden direkt im Browser per SPARQL (Oxigraph WASM) abgefragt –
-      ohne Server, ohne Backend.
+      ohne Server, ohne Backend. Die App-Liste ist als RDF modelliert:
+      je eine <code>apps/*.ttl</code> pro App, verknüpft über <code>apps/manifest.ttl</code>.
     </p>
   </sl-card>
 </main>
@@ -185,6 +150,121 @@
   &nbsp;·&nbsp;
   <a href="https://github.com/angelo-v/llm-knowledge-graph" target="_blank">GitHub</a>
 </footer>
+
+<script type="module">
+  import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
+
+  const SPARQL = `
+    PREFIX app:  <https://shop.example.org/apps#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX dct:  <http://purl.org/dc/terms/>
+    PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+    SELECT ?label ?description ?url ?icon ?badgeVariant ?badgeLabel ?sortOrder
+    WHERE {
+      ?app a app:App ;
+           rdfs:label       ?label ;
+           dct:description  ?description ;
+           app:url          ?url ;
+           app:icon         ?icon ;
+           app:badgeVariant ?badgeVariant ;
+           app:badgeLabel   ?badgeLabel ;
+           app:sortOrder    ?sortOrder .
+    }
+    ORDER BY ?sortOrder
+  `;
+
+  // IRI-Präfix der App-Ontologie → relativer Dateipfad
+  const APP_IRI_BASE = 'https://shop.example.org/apps/';
+  const OWL_IMPORTS  = 'http://www.w3.org/2002/07/owl#imports';
+
+  async function fetchTtl(path) {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`HTTP ${res.status} – ${path}`);
+    return res.text();
+  }
+
+  /** Liest apps/manifest.ttl und extrahiert alle owl:imports-IRIs als TTL-Pfade. */
+  async function appTtlPaths(store) {
+    const manifestTtl = await fetchTtl('apps/manifest.ttl');
+    store.load(manifestTtl, 'text/turtle', 'https://shop.example.org/');
+
+    const rows = store.query(`
+      PREFIX owl: <http://www.w3.org/2002/07/owl#>
+      SELECT ?iri WHERE { ?manifest owl:imports ?iri }
+    `);
+
+    // IRI  https://shop.example.org/apps/glossar  →  apps/glossar.ttl
+    return rows.map(r => {
+      const iri = r.get('iri').value;
+      const name = iri.replace(APP_IRI_BASE, '');
+      return `apps/${name}.ttl`;
+    });
+  }
+
+  function renderCards(rows) {
+    const grid = document.getElementById('app-grid');
+    grid.innerHTML = '';
+
+    if (rows.length === 0) {
+      grid.innerHTML = '<p style="color:#94a3b8">Keine Apps im Graphen gefunden.</p>';
+      return;
+    }
+
+    for (const row of rows) {
+      const label       = row.get('label')?.value        ?? '–';
+      const description = row.get('description')?.value  ?? '';
+      const url         = row.get('url')?.value          ?? '#';
+      const icon        = row.get('icon')?.value         ?? '📄';
+      const variant     = row.get('badgeVariant')?.value ?? 'neutral';
+      const badge       = row.get('badgeLabel')?.value   ?? '';
+
+      const card = document.createElement('a');
+      card.className = 'app-card';
+      card.href = url;
+      card.innerHTML = `
+        <div class="icon">${icon}</div>
+        <h3>${label}</h3>
+        <p>${description}</p>
+        <div class="badge">
+          <sl-badge variant="${variant}" pill>${badge}</sl-badge>
+        </div>
+      `;
+      grid.appendChild(card);
+    }
+  }
+
+  async function main() {
+    const statusEl = document.getElementById('status');
+    try {
+      await init();
+      const store = new Store();
+
+      // 1. Manifest lesen → App-TTL-Pfade ermitteln
+      const paths = await appTtlPaths(store);
+
+      // 2. Alle App-TTLs parallel laden
+      const appTtls = await Promise.all(paths.map(fetchTtl));
+      appTtls.forEach((ttl, i) =>
+        store.load(ttl, 'text/turtle', 'https://shop.example.org/')
+      );
+
+      // 3. SPARQL → Karten rendern
+      const results = store.query(SPARQL);
+      renderCards(results);
+
+      statusEl.remove();
+    } catch (err) {
+      statusEl.innerHTML = `
+        <sl-icon name="exclamation-triangle" style="color:#ef4444"></sl-icon>
+        <span style="color:#ef4444">Fehler beim Laden: ${err.message}</span>
+      `;
+      console.error(err);
+    }
+  }
+
+  main();
+</script>
 
 </body>
 </html>

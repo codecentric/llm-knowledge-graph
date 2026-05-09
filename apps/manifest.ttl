@@ -1,0 +1,17 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ── App-Manifest ─────────────────────────────────────────────────────────────
+# Listet alle App-TTL-Dateien. index.html liest diese Datei und lädt
+# anschließend jede referenzierte TTL in den Oxigraph-Store.
+# Neue App hinzufügen: owl:imports-Triple ergänzen, App-TTL anlegen.
+
+<https://shop.example.org/apps/manifest>
+    a owl:Ontology ;
+    dct:title   "App-Manifest"@de ;
+    dct:created "2026-05-09"^^xsd:date ;
+    owl:imports <https://shop.example.org/apps/glossar> ;
+    owl:imports <https://shop.example.org/apps/versand> ;
+    owl:imports <https://shop.example.org/apps/zahlungsmethoden> ;
+    owl:imports <https://shop.example.org/apps/offene-fragen> .

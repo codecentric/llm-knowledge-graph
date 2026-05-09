@@ -32,6 +32,15 @@
     header .icon { font-size: 2rem; line-height: 1; }
     header h1   { margin: 0; font-size: 1.4rem; font-weight: 700; }
     header p    { margin: .2rem 0 0; font-size: .82rem; opacity: .7; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: .35rem;
+      color: rgba(255,255,255,.75); font-size: .8rem; text-decoration: none;
+      padding: .2rem .55rem; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.25);
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .back-link:hover { background: rgba(255,255,255,.15); color: #fff; }
 
     /* Stats bar */
     .stats-bar {
@@ -238,6 +247,7 @@
 <body>
 
 <header>
+  <a class="back-link" href="../index.html">&#8592; Übersicht</a>
   <div class="icon">⚠️</div>
   <div>
     <h1>Offene Fragen – Shop Knowledge Graph</h1>

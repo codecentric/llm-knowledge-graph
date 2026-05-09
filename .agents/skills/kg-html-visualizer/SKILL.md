@@ -16,6 +16,36 @@ Dieses Skill erzeugt **selbstständige Single-Page-HTML-Dateien**, die RDF/Turtl
 Die erzeugte HTML-Datei lädt alle Bibliotheken von CDN und die TTL-Daten per `fetch()` aus dem `graph/`-Ordner. Ein lokaler Webserver ist nötig (`npm run serve`). TTL-Daten dürfen **niemals** als JS-String-Literal eingebettet werden – das führt zu `Not supported MIME type`-Fehlern in Oxigraph (siehe `references/oxigraph-api.md`).
 
 > **Output-Verzeichnis:** Alle erzeugten HTML-Dateien werden im Ordner **`apps/`** (relativ zum Projekt-Root) gespeichert. Der Ordner wird bei Bedarf automatisch angelegt. Beispiel-Pfad: `apps/mein-glossar.html`.
+>
+> **Backlink (Pflicht):** Jede App-HTML muss im `<header>` als erstes Kind einen Link zurück zur Übersicht enthalten:
+> ```html
+> <a class="back-link" href="../index.html">&#8592; Übersicht</a>
+> ```
+> Mit diesem CSS direkt im `<style>`-Block der App (an den vorhandenen `header`-Block anhängen):
+> ```css
+> .back-link {
+>   display: inline-flex; align-items: center; gap: .35rem;
+>   color: rgba(255,255,255,.75); font-size: .8rem; text-decoration: none;
+>   padding: .2rem .55rem; border-radius: 6px;
+>   border: 1px solid rgba(255,255,255,.25);
+>   transition: background .15s, color .15s;
+>   white-space: nowrap;
+> }
+> .back-link:hover { background: rgba(255,255,255,.15); color: #fff; }
+> ```
+>
+> **App-TTL (Pflicht):** Jede neue App bekommt eine eigene TTL-Datei **direkt neben der HTML-Datei** in `apps/`, z. B. `apps/mein-glossar.ttl`. Sie beschreibt die App als Instanz von `app:App` mit den Properties `rdfs:label`, `dct:description`, `app:url`, `app:icon`, `app:badgeVariant`, `app:badgeLabel` und `app:sortOrder`. Die Klassen-/Property-Definitionen (`app:App` etc.) sind in `graph/apps.ttl` definiert, werden aber nicht von `index.html` geladen – Oxigraph benötigt sie für die SPARQL-Query nicht.
+>
+> **Manifest aktualisieren (Pflicht):** Nach dem Anlegen der App-TTL muss `apps/manifest.ttl` um einen `owl:imports`-Triple für die neue App-IRI ergänzt werden, z. B.:
+> ```turtle
+> owl:imports <https://shop.example.org/apps/mein-glossar> .
+> ```
+> `index.html` liest das Manifest und lädt alle verknüpften TTLs automatisch – kein manueller Eingriff in die HTML nötig.
+>
+> **Validierung:** Nach jeder Änderung an TTL-Dateien validieren:
+> ```bash
+> node .agents/skills/sparql-query/scripts/validate.js apps/mein-glossar.ttl apps/manifest.ttl
+> ```
 
 ## Schritt-für-Schritt-Workflow
 

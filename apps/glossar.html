@@ -28,6 +28,15 @@
     }
     header h1 { margin: 0; font-size: 1.15rem; flex: 1; letter-spacing: -.01em; }
     header .badges { display: flex; gap: .4rem; flex-wrap: wrap; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: .35rem;
+      color: rgba(255,255,255,.75); font-size: .8rem; text-decoration: none;
+      padding: .2rem .55rem; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.25);
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .back-link:hover { background: rgba(255,255,255,.15); color: #fff; }
 
     .toolbar {
       display: flex; gap: .45rem; align-items: center; flex-wrap: wrap;
@@ -94,6 +103,7 @@
 <body>
 
 <header>
+  <a class="back-link" href="../index.html">&#8592; Übersicht</a>
   <h1 id="page-title">Shop-Fachglossar: Checkout, Versand &amp; Preisregeln</h1>
   <div class="badges">
     <sl-badge id="node-count" variant="neutral" pill>– Konzepte</sl-badge>

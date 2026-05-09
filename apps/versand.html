@@ -48,6 +48,15 @@
     header h1 { margin: 0; font-size: 1.35rem; font-weight: 700; flex: 1; }
     header p  { margin: 0; font-size: .8rem; opacity: .7; }
     #header-badges { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: .35rem;
+      color: rgba(255,255,255,.75); font-size: .8rem; text-decoration: none;
+      padding: .2rem .55rem; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.25);
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .back-link:hover { background: rgba(255,255,255,.15); color: #fff; }
 
     /* ── Loading overlay ─────────────────────────────────────── */
     #loading-overlay {
@@ -172,6 +181,7 @@
 
 <!-- Header -->
 <header>
+  <a class="back-link" href="../index.html">&#8592; Übersicht</a>
   <div class="icon-wrap">📦</div>
   <div>
     <h1>Versanddomäne – Shop Knowledge Graph</h1>
