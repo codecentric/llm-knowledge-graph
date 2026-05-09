@@ -13,17 +13,15 @@ Dieses Skill erzeugt **selbstständige Single-Page-HTML-Dateien**, die RDF/Turtl
 .ttl-Dateien einlesen → SPARQL formulieren → HTML-Template befüllen → fertige .html ausgeben
 ```
 
-Die erzeugte HTML-Datei ist **komplett standalone**: alle Bibliotheken kommen von CDN, die TTL-Daten werden inline als JavaScript-String eingebettet. Kein Server nötig.
+Die erzeugte HTML-Datei lädt alle Bibliotheken von CDN und die TTL-Daten per `fetch()` aus dem `graph/`-Ordner. Ein lokaler Webserver ist nötig (`npm run serve`). TTL-Daten dürfen **niemals** als JS-String-Literal eingebettet werden – das führt zu `Not supported MIME type`-Fehlern in Oxigraph (siehe `references/oxigraph-api.md`).
 
 > **Output-Verzeichnis:** Alle erzeugten HTML-Dateien werden im Ordner **`apps/`** (relativ zum Projekt-Root) gespeichert. Der Ordner wird bei Bedarf automatisch angelegt. Beispiel-Pfad: `apps/mein-glossar.html`.
 
 ## Schritt-für-Schritt-Workflow
 
-### Schritt 1 – TTL-Dateien einlesen
+### Schritt 1 – TTL-Dateien per SPARQL erkunden
 
-Alle relevanten `.ttl`-Dateien mit dem `read`-Tool einlesen. Bei mehreren Dateien den Inhalt zu einem gemeinsamen Turtle-String zusammenführen (einfach konkatenieren, gleiche `@prefix`-Deklarationen werden von Oxigraph toleriert).
-
-Wichtig: Prüfe, welche Prefixe definiert sind – sie werden für SPARQL-Queries gebraucht.
+Nie direkt lesen (Zugriff nur per SPARQL). Mit `node .agents/skills/sparql-query/scripts/query.js` die Struktur und Prefixe der TTL-Datei ermitteln. Die Dateipfade werden später im `fetch()`-Aufruf im HTML referenziert – **kein** Einbetten als String.
 
 ### Schritt 2 – Visualisierungstyp wählen
 
@@ -64,18 +62,22 @@ node .agents/skills/kg-html-visualizer/scripts/generate.js \
   --output apps/konzept-netzwerk.html
 ```
 
-Alternativ: Den Template-Inhalt direkt im Agenten per LLM anpassen (Inline-Ansatz, kein Node nötig – bevorzugt bei komplexen individuellen Anforderungen).
+Der Agent schreibt die HTML-Datei direkt mit dem `write`-Tool. Als Basis dient das passende Template aus `templates/`, das manuell angepasst wird.
 
-### Schritt 5 – Inline-Ansatz (bevorzugt für individuelle Visualisierungen)
-
-Der Agent liest ein passendes Template, ersetzt die Platzhalter direkt im Code und schreibt das Ergebnis als fertige `.html`-Datei:
+### Schritt 5 – HTML schreiben (fetch-Ansatz, immer verwenden)
 
 1. Template mit `read` laden
-2. `__TTL_DATA__` durch den Base64-kodierten oder raw-escaped TTL-String ersetzen
+2. `__TTL_DATA__`-Platzhalter **entfernen** – stattdessen `fetch()`-Aufruf einbauen:
+   ```js
+   const ttl = await fetchTtl('../graph/meine-datei.ttl');
+   store.load(ttl, 'text/turtle', 'https://example.org/');
+   ```
 3. `__SPARQL_QUERY__` durch die fertige Query ersetzen
 4. `__PAGE_TITLE__` durch den gewünschten Titel ersetzen
-5. Mit `write` als `.html` in **`apps/`** speichern – z. B. `apps/mein-glossar.html`
-   (Ordner anlegen falls nötig: `bash mkdir -p apps`)
+5. Mit `write` als `.html` in **`apps/`** speichern
+
+> **Niemals** TTL als JS-Template-Literal einbetten. Immer `fetch()` verwenden.
+> **Starten** mit `npm run serve`, dann `http://localhost:4000/apps/datei.html` öffnen.
 
 ## Template-Bibliotheken (CDN, kein Install)
 
@@ -88,11 +90,17 @@ Der Agent liest ein passendes Template, ersetzt die Platzhalter direkt im Code u
 
 ## Hinweise für den Agenten
 
-- **TTL einbetten:** Den TTL-Rohtext als JS-Template-Literal in die HTML-Datei schreiben: `` const TTL = `...`; ``
-  - Backticks im TTL escapen: `` ` `` → `` \` ``
-  - Backslashes verdoppeln: `\` → `\\`
+- **TTL laden:** Immer `fetch('../graph/datei.ttl')` verwenden – niemals als JS-String einbetten
+- **store.load() Signatur:** Positional-Parameter: `store.load(ttlString, 'text/turtle', 'https://example.org/')` – kein Options-Objekt `{ format, baseIri }` (wirft sonst `Not supported MIME type`)
 - **Oxigraph-Initialisierung:** Immer `await init()` vor `new Store()` aufrufen (WASM muss geladen sein)
 - **SPARQL-Fehler abfangen:** `try/catch` um alle `store.query()` Aufrufe – Fehler als `<sl-alert variant="danger">` anzeigen
+- **Cytoscape Graph-Panel Höhe:** `sl-tab-panel` rendert ein Shadow-DOM – `height: 100%` auf `#cy` erbt **nicht** vom Panel. Immer so stylen:
+  ```css
+  #cy-panel { padding: 0; }
+  #cy-panel::part(base) { height: calc(100vh - 115px); padding: 0; }
+  #cy { width: 100%; height: calc(100vh - 115px); display: block; }
+  ```
+  Ohne `::part(base)` ist die effektive Höhe 0px und der Graph bleibt unsichtbar.
 - **Cytoscape-Knoten:** Für SKOS-Graphen: Konzepte als Knoten, `skos:broader`/`skos:related`/`skos:narrower` als Kanten – unterschiedliche Kantenfarben je Relation
 - **Shoelace-Theme:** Immer beide CSS-Dateien einbinden: light + `shoelace/cdn/themes/light.css`; `sl-` Prefix für alle Komponenten
 - **Responsivität:** CSS-Grid mit `auto-fill, minmax(300px, 1fr)` für Card-Layouts

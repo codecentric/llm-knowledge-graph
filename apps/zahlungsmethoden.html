@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zahlungsmethoden & Zahlungsregeln</title>
+
+  <!-- Shoelace -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+
+  <!-- Cytoscape -->
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+
+  <style>
+    :root {
+      --sl-color-primary-600: #3b5bdb;
+      --brand:   #3b5bdb;
+      --brand-d: #1e3799;
+      --ok:      #2f9e44;
+      --warn:    #e67700;
+      --scope:   #c92a2a;
+      --neutral: #495057;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: var(--sl-font-sans);
+      margin: 0; background: #f0f2f9;
+      color: #1a1a2e; min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2d3a8c 100%);
+      color: #fff; padding: 1.2rem 2rem;
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    header .icon { font-size: 1.8rem; }
+    header h1 { margin: 0; font-size: 1.35rem; flex: 1; }
+    header p  { margin: .2rem 0 0; font-size: .85rem; opacity: .75; flex-basis: 100%; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
+      padding: .65rem 1.5rem; background: #fff;
+      border-bottom: 1px solid #dde2f0;
+      position: sticky; top: 0; z-index: 50;
+    }
+
+    /* ── Tab group ── */
+    sl-tab-group { --indicator-color: var(--brand); }
+    #tab-panels  { padding: 0; }
+
+    /* ── Panel: Karten ── */
+    #panel-cards { padding: 1.5rem 2rem; }
+    #card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 1rem;
+    }
+
+    /* Zahlungsmethoden-Karten */
+    .zm-card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 1.1rem 1.2rem;
+      border-left: 5px solid var(--brand);
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .zm-card:hover { transform: translateY(-2px); box-shadow: 0 5px 18px rgba(0,0,0,.13); }
+    .zm-card.ausser-scope { border-left-color: var(--scope); opacity: .85; }
+    .zm-card .card-header { display: flex; align-items: center; gap: .55rem; margin-bottom: .5rem; }
+    .zm-card .card-icon { font-size: 1.4rem; }
+    .zm-card .card-name { font-weight: 700; font-size: 1rem; }
+    .zm-card .card-desc { font-size: .83rem; color: #555; line-height: 1.5; margin-bottom: .6rem; }
+    .zm-card .land-row  { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
+    .zm-card .cond-box  {
+      background: #fff8e1; border: 1px solid #ffe082;
+      border-radius: 6px; padding: .35rem .6rem;
+      font-size: .78rem; color: #7c5f00; margin-top: .5rem;
+    }
+    .zm-card .scope-box {
+      background: #fff0f0; border: 1px solid #ffa8a8;
+      border-radius: 6px; padding: .35rem .6rem;
+      font-size: .78rem; color: #9c1b1b; margin-top: .5rem;
+    }
+    .zm-card .meta {
+      font-size: .72rem; color: #aaa; margin-top: .65rem;
+      border-top: 1px solid #f0f0f0; padding-top: .4rem;
+    }
+
+    /* Regel-Karten */
+    .regel-card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 1rem 1.2rem;
+      border-left: 5px solid #ae3ec9;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .regel-card:hover { transform: translateY(-2px); box-shadow: 0 5px 18px rgba(0,0,0,.13); }
+    .regel-card .rk-title { font-weight: 700; font-size: .95rem; margin-bottom: .35rem; }
+    .regel-card .rk-desc  { font-size: .82rem; color: #555; line-height: 1.5; }
+    .regel-card .rk-grund {
+      background: #f3f0ff; border-radius: 6px;
+      padding: .3rem .55rem; font-size: .78rem;
+      color: #5f3dc4; margin-top: .5rem;
+    }
+
+    /* Sektion-Überschriften */
+    .section-title {
+      font-size: 1.05rem; font-weight: 700; color: #2d3a8c;
+      margin: 0 0 .75rem; display: flex; align-items: center; gap: .4rem;
+    }
+    .section-wrap { margin-bottom: 2rem; }
+
+    /* ── Panel: Graph ── */
+    #panel-graph { padding: 0; }
+    #panel-graph::part(base) { height: calc(100vh - 115px); padding: 0; }
+    #cy { width: 100%; height: calc(100vh - 115px); display: block; background: #fafbff; }
+    #cy-status {
+      position: absolute; inset: 0; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      background: #fafbff; z-index: 5;
+    }
+
+    /* ── Legende ── */
+    .legend {
+      position: absolute; bottom: 1rem; left: 1rem;
+      background: rgba(255,255,255,.92); border: 1px solid #dde2f0;
+      border-radius: 10px; padding: .65rem .9rem; font-size: .76rem;
+      display: flex; flex-direction: column; gap: .3rem; z-index: 10;
+    }
+    .legend-item { display: flex; align-items: center; gap: .45rem; }
+    .legend-dot  { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .legend-line { width: 22px; height: 3px; flex-shrink: 0; border-radius: 2px; }
+
+    /* ── Detail-Drawer ── */
+    #detail-drawer::part(panel) { max-width: 360px; }
+    .prop { margin: .5rem 0; }
+    .prop strong { display: block; font-size: .73rem; color: #888; margin-bottom: .1rem; }
+
+    /* ── Panel: Offene Punkte ── */
+    #panel-open { padding: 1.5rem 2rem; }
+    .op-card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 1rem 1.2rem;
+      border-left: 5px solid var(--warn);
+      max-width: 680px; margin-bottom: 1rem;
+    }
+    .op-card .op-title { font-weight: 700; font-size: .97rem; margin-bottom: .35rem; }
+    .op-card .op-desc  { font-size: .84rem; color: #555; line-height: 1.5; }
+
+    /* Badge-Farben */
+    sl-badge.land { --sl-color-primary-600: #3b5bdb; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="icon">💳</span>
+  <h1>Zahlungsmethoden &amp; Zahlungsregeln</h1>
+  <p>Knowledge Graph – Shop Checkout · Quelle: meeting-checkout-versand.md · Stand: 2024-03-05</p>
+</header>
+
+<div class="toolbar">
+  <sl-input id="search" placeholder="Suchen …" clearable size="small" style="flex:1;min-width:180px;">
+    <sl-icon slot="prefix" name="search"></sl-icon>
+  </sl-input>
+  <sl-button size="small" id="btn-fit" variant="neutral" style="display:none;">
+    <sl-icon slot="prefix" name="arrows-fullscreen"></sl-icon> Fit
+  </sl-button>
+  <sl-select id="layout-select" size="small" value="cose" style="width:155px;display:none;">
+    <sl-option value="cose">CoSE</sl-option>
+    <sl-option value="breadthfirst">Hierarchie</sl-option>
+    <sl-option value="circle">Kreis</sl-option>
+    <sl-option value="concentric">Konzentrisch</sl-option>
+  </sl-select>
+  <sl-badge id="count-badge" variant="neutral">Lade …</sl-badge>
+</div>
+
+<sl-tab-group id="tabs">
+  <sl-tab slot="nav" panel="cards">
+    <sl-icon name="credit-card"></sl-icon>&nbsp; Zahlungsmethoden
+  </sl-tab>
+  <sl-tab slot="nav" panel="regeln">
+    <sl-icon name="shield-check"></sl-icon>&nbsp; Regeln
+  </sl-tab>
+  <sl-tab slot="nav" panel="graph">
+    <sl-icon name="diagram-3"></sl-icon>&nbsp; Graph
+  </sl-tab>
+  <sl-tab slot="nav" panel="open">
+    <sl-icon name="exclamation-triangle"></sl-icon>&nbsp; Offene Punkte
+  </sl-tab>
+
+  <!-- ── Tab: Zahlungsmethoden ── -->
+  <sl-tab-panel name="cards" id="panel-cards">
+    <div class="section-wrap">
+      <div class="section-title">⚡ Aktive Zahlungsmethoden</div>
+      <div id="card-grid"></div>
+    </div>
+  </sl-tab-panel>
+
+  <!-- ── Tab: Regeln ── -->
+  <sl-tab-panel name="regeln" style="padding:1.5rem 2rem;">
+    <div class="section-wrap">
+      <div class="section-title">📋 Zahlungsregeln</div>
+      <div id="regel-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1rem;"></div>
+    </div>
+  </sl-tab-panel>
+
+  <!-- ── Tab: Graph ── -->
+  <sl-tab-panel name="graph" id="panel-graph">
+    <div id="cy-status">
+      <sl-spinner style="font-size:2rem;"></sl-spinner>
+      <p style="color:#888;margin-top:.5rem;">Initialisiere Graph …</p>
+    </div>
+    <div id="cy"></div>
+    <div class="legend">
+      <strong style="font-size:.8rem;margin-bottom:.2rem;">Legende</strong>
+      <div class="legend-item"><div class="legend-dot" style="background:#3b5bdb;"></div> Zahlungsmethode</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ae3ec9;"></div> Zahlungsregel</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2f9e44;"></div> Land</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e67700;"></div> Ländergruppe</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c92a2a;"></div> außer Scope</div>
+      <div class="legend-item"><div class="legend-line" style="background:#3b5bdb;"></div> verfügbar in</div>
+      <div class="legend-item"><div class="legend-line" style="background:#ae3ec9;border-top:2px dashed #ae3ec9;height:0;"></div> betrifft</div>
+      <div class="legend-item"><div class="legend-line" style="background:#c92a2a;"></div> ausgeschlossen durch</div>
+    </div>
+  </sl-tab-panel>
+
+  <!-- ── Tab: Offene Punkte ── -->
+  <sl-tab-panel name="open" id="panel-open">
+    <div id="open-grid"></div>
+  </sl-tab-panel>
+</sl-tab-group>
+
+<!-- Detail-Drawer -->
+<sl-drawer id="detail-drawer" label="Details" placement="end">
+  <div id="detail-content"><p style="color:#aaa;">Klicke einen Knoten an.</p></div>
+  <sl-button slot="footer" variant="primary"
+    onclick="document.getElementById('detail-drawer').hide()">Schließen</sl-button>
+</sl-drawer>
+
+<script type="module">
+// ═══════════════════════════════════════════════════════════════
+// TTL per fetch() laden (Inline-Embedding vermeiden – MIME-Bug)
+// ═══════════════════════════════════════════════════════════════
+async function fetchTtl(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`Konnte ${path} nicht laden (HTTP ${res.status})`);
+  return res.text();
+}
+
+// TTL wird per fetch() aus dem graph/-Ordner geladen – kein Inline-Embedding
+
+// ═══════════════════════════════════════════════════════════════
+// SPARQL-Queries
+// ═══════════════════════════════════════════════════════════════
+
+const Q_ZAHLUNGEN = `
+PREFIX zahlung: <https://shop.example.org/zahlung#>
+PREFIX :        <https://shop.example.org/glossary#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct:     <http://purl.org/dc/terms/>
+PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+
+SELECT ?zm ?desc ?bedingung ?scope ?scopeGrund
+       (GROUP_CONCAT(DISTINCT ?landLabel ; separator="|") AS ?laender)
+       (GROUP_CONCAT(DISTINCT ?lgLabel   ; separator="|") AS ?laendergruppen)
+WHERE {
+  ?zm a owl:NamedIndividual .
+  FILTER(?zm IN (
+    :Kreditkarte, :PayPal, :Rechnung, :Sofortuberweisung, :Ratenkauf
+  ))
+  OPTIONAL { ?zm dct:description ?desc FILTER(lang(?desc)="de") }
+  OPTIONAL { ?zm zahlung:bedingung ?bedingung }
+  OPTIONAL { ?zm zahlung:status ?scope }
+  OPTIONAL { ?zm zahlung:ausserScopeGrund ?scopeGrund }
+  OPTIONAL {
+    ?zm zahlung:verfügbarInLand ?land .
+    ?land rdfs:label ?landLabel FILTER(lang(?landLabel)="de")
+  }
+  OPTIONAL {
+    ?zm zahlung:verfügbarInLaendergruppe ?lg .
+    ?lg rdfs:label ?lgLabel FILTER(lang(?lgLabel)="de")
+  }
+}
+GROUP BY ?zm ?desc ?bedingung ?scope ?scopeGrund
+`;
+
+const Q_REGELN = `
+PREFIX zahlung: <https://shop.example.org/zahlung#>
+PREFIX :        <https://shop.example.org/glossary#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct:     <http://purl.org/dc/terms/>
+
+SELECT ?regel ?label ?desc ?grund ?zmLabel WHERE {
+  ?regel a :Zahlungsregel .
+  ?regel rdfs:label ?label FILTER(lang(?label)="de")
+  OPTIONAL { ?regel dct:description ?desc FILTER(lang(?desc)="de") }
+  OPTIONAL { ?regel zahlung:regelBegründung ?grund FILTER(lang(?grund)="de") }
+  OPTIONAL {
+    ?regel zahlung:betrifftZahlungsmethode ?zm .
+    BIND(STRAFTER(STR(?zm), "#") AS ?zmLabel)
+  }
+}
+`;
+
+const Q_OPEN = `
+PREFIX zahlung: <https://shop.example.org/zahlung#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct:     <http://purl.org/dc/terms/>
+
+SELECT ?op ?label ?desc ?status WHERE {
+  ?op a zahlung:OffenerPunkt .
+  ?op rdfs:label ?label FILTER(lang(?label)="de")
+  OPTIONAL { ?op dct:description ?desc FILTER(lang(?desc)="de") }
+  OPTIONAL { ?op zahlung:status ?status }
+}
+`;
+
+const Q_GRAPH = `
+PREFIX zahlung: <https://shop.example.org/zahlung#>
+PREFIX :        <https://shop.example.org/glossary#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+PREFIX dct:     <http://purl.org/dc/terms/>
+
+SELECT ?source ?sourceLabel ?sourceType ?target ?targetLabel ?rel WHERE {
+  {
+    # Zahlungsmethode → Land (verfügbarInLand)
+    ?source a owl:NamedIndividual .
+    FILTER(?source IN (
+      <https://shop.example.org/glossary#Kreditkarte>,
+      <https://shop.example.org/glossary#PayPal>,
+      <https://shop.example.org/glossary#Rechnung>,
+      <https://shop.example.org/glossary#Sofortuberweisung>,
+      <https://shop.example.org/glossary#Ratenkauf>
+    ))
+    ?source zahlung:verfügbarInLand ?target .
+    ?target rdfs:label ?targetLabel FILTER(lang(?targetLabel)="de")
+    BIND("verfügbarInLand" AS ?rel)
+    BIND("zahlungsmethode" AS ?sourceType)
+  }
+  UNION {
+    # Zahlungsmethode → Ländergruppe
+    ?source a owl:NamedIndividual .
+    FILTER(?source IN (
+      <https://shop.example.org/glossary#Kreditkarte>,
+      <https://shop.example.org/glossary#PayPal>,
+      <https://shop.example.org/glossary#Rechnung>,
+      <https://shop.example.org/glossary#Sofortuberweisung>,
+      <https://shop.example.org/glossary#Ratenkauf>
+    ))
+    ?source zahlung:verfügbarInLaendergruppe ?target .
+    ?target rdfs:label ?targetLabel FILTER(lang(?targetLabel)="de")
+    BIND("verfügbarInGruppe" AS ?rel)
+    BIND("zahlungsmethode" AS ?sourceType)
+  }
+  UNION {
+    # Regel → Zahlungsmethode
+    ?source a <https://shop.example.org/glossary#Zahlungsregel> .
+    ?source rdfs:label ?sourceLabel FILTER(lang(?sourceLabel)="de")
+    ?source zahlung:betrifftZahlungsmethode ?target .
+    BIND("betrifftZahlungsmethode" AS ?rel)
+    BIND("regel" AS ?sourceType)
+  }
+  OPTIONAL {
+    FILTER(?sourceType != "regel")
+    BIND(STRAFTER(STR(?source), "#") AS ?sourceLabel)
+  }
+}
+`;
+
+// ═══════════════════════════════════════════════════════════════
+// Oxigraph
+// ═══════════════════════════════════════════════════════════════
+import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
+
+const searchEl  = document.getElementById('search');
+const countEl   = document.getElementById('count-badge');
+const cardGrid  = document.getElementById('card-grid');
+const regelGrid = document.getElementById('regel-grid');
+const openGrid  = document.getElementById('open-grid');
+const tabsEl    = document.getElementById('tabs');
+const fitBtn    = document.getElementById('btn-fit');
+const layoutSel = document.getElementById('layout-select');
+const cyStatus  = document.getElementById('cy-status');
+
+let store, cy;
+let graphBuilt = false;
+
+// Mapping: IRI → label (für Kartenklick → Graph)
+const ZM_INFO = {
+  'https://shop.example.org/glossary#Kreditkarte':    { icon: '💳', name: 'Kreditkarte' },
+  'https://shop.example.org/glossary#PayPal':          { icon: '🅿️',  name: 'PayPal' },
+  'https://shop.example.org/glossary#Rechnung':        { icon: '🧾', name: 'Rechnung' },
+  'https://shop.example.org/glossary#Sofortuberweisung':{ icon: '⚡', name: 'Sofortüberweisung' },
+  'https://shop.example.org/glossary#Ratenkauf':       { icon: '📅', name: 'Ratenkauf' },
+};
+
+async function main() {
+  await init();
+  store = new Store();
+
+  let ttl;
+  try {
+    ttl = await fetchTtl('../graph/zahlungsmethoden.ttl');
+  } catch (e) {
+    showError('TTL laden fehlgeschlagen: ' + e.message); return;
+  }
+  try {
+    store.load(ttl, 'text/turtle', 'https://shop.example.org/');
+  } catch (e) {
+    showError('TTL Parse-Fehler: ' + e.message); return;
+  }
+
+  await renderZahlungen();
+  await renderRegeln();
+  await renderOffenePunkte();
+}
+
+// ── Zahlungsmethoden ──────────────────────────────────────────
+async function renderZahlungen() {
+  let rows;
+  try { rows = [...store.query(Q_ZAHLUNGEN)]; }
+  catch (e) { console.error('Q_ZAHLUNGEN', e); rows = []; }
+
+  let aktiv = 0;
+  cardGrid.innerHTML = '';
+
+  for (const row of rows) {
+    const iri       = row.get('zm')?.value ?? '';
+    const desc      = row.get('desc')?.value ?? '';
+    const bedingung = row.get('bedingung')?.value ?? '';
+    const scope     = row.get('scope')?.value ?? '';
+    const scopeGrund= row.get('scopeGrund')?.value ?? '';
+    const laender   = (row.get('laender')?.value ?? '').split('|').filter(Boolean);
+    const lgruppen  = (row.get('laendergruppen')?.value ?? '').split('|').filter(Boolean);
+    const info      = ZM_INFO[iri] || { icon: '💰', name: shortIri(iri) };
+    const isScope   = scope === 'ausserScope';
+
+    if (!isScope) aktiv++;
+
+    const card = document.createElement('div');
+    card.className = 'zm-card' + (isScope ? ' ausser-scope' : '');
+    card.dataset.iri = iri;
+    card.dataset.search = (info.name + ' ' + desc + ' ' + bedingung).toLowerCase();
+
+    const landerHtml = [...laender, ...lgruppen].map(l =>
+      `<sl-badge variant="primary" pill class="land">${escHtml(l)}</sl-badge>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-icon">${info.icon}</span>
+        <span class="card-name">${escHtml(info.name)}</span>
+        ${isScope ? '<sl-badge variant="danger">außer Scope</sl-badge>' : '<sl-badge variant="success">aktiv</sl-badge>'}
+      </div>
+      ${desc ? `<div class="card-desc">${escHtml(desc)}</div>` : ''}
+      ${landerHtml ? `<div class="land-row">${landerHtml}</div>` : ''}
+      ${bedingung ? `<div class="cond-box">⚠️ <strong>Bedingung:</strong> ${escHtml(bedingung)}</div>` : ''}
+      ${scopeGrund ? `<div class="scope-box">🚫 ${escHtml(scopeGrund)}</div>` : ''}
+      <div class="meta">${escHtml(shortIri(iri))}</div>
+    `;
+
+    card.addEventListener('click', () => {
+      if (cy) {
+        tabsEl.show('graph');
+        setTimeout(() => {
+          const n = cy.getElementById(iri);
+          if (n.length) {
+            cy.animate({ center: { eles: n }, zoom: 1.8 }, { duration: 400 });
+            cy.elements().unselect();
+            n.select();
+          }
+        }, 200);
+      }
+    });
+
+    cardGrid.appendChild(card);
+  }
+
+  countEl.textContent = `${aktiv} aktiv · ${rows.length - aktiv} außer Scope`;
+}
+
+// ── Zahlungsregeln ─────────────────────────────────────────────
+async function renderRegeln() {
+  let rows;
+  try { rows = [...store.query(Q_REGELN)]; }
+  catch (e) { console.error('Q_REGELN', e); rows = []; }
+
+  regelGrid.innerHTML = '';
+  for (const row of rows) {
+    const label   = row.get('label')?.value ?? '';
+    const desc    = row.get('desc')?.value ?? '';
+    const grund   = row.get('grund')?.value ?? '';
+    const zmLabel = row.get('zmLabel')?.value ?? '';
+
+    const card = document.createElement('div');
+    card.className = 'regel-card';
+    card.dataset.search = (label + ' ' + desc + ' ' + grund).toLowerCase();
+    card.innerHTML = `
+      <div class="rk-title">📋 ${escHtml(label)}</div>
+      ${zmLabel ? `<sl-badge variant="primary" style="margin-bottom:.4rem;">${escHtml(zmLabel)}</sl-badge>` : ''}
+      ${desc  ? `<div class="rk-desc">${escHtml(desc)}</div>` : ''}
+      ${grund ? `<div class="rk-grund">💡 ${escHtml(grund)}</div>` : ''}
+    `;
+    regelGrid.appendChild(card);
+  }
+}
+
+// ── Offene Punkte ──────────────────────────────────────────────
+async function renderOffenePunkte() {
+  let rows;
+  try { rows = [...store.query(Q_OPEN)]; }
+  catch (e) { console.error('Q_OPEN', e); rows = []; }
+
+  openGrid.innerHTML = '';
+  if (rows.length === 0) {
+    openGrid.innerHTML = '<p style="color:#888;">Keine offenen Punkte gefunden.</p>';
+    return;
+  }
+  for (const row of rows) {
+    const label  = row.get('label')?.value ?? '';
+    const desc   = row.get('desc')?.value ?? '';
+    const status = row.get('status')?.value ?? '';
+
+    const card = document.createElement('div');
+    card.className = 'op-card';
+    card.innerHTML = `
+      <div class="op-title">
+        ⚠️ ${escHtml(label)}
+        ${status ? `<sl-badge variant="warning" style="margin-left:.4rem;">${escHtml(status)}</sl-badge>` : ''}
+      </div>
+      ${desc ? `<div class="op-desc">${escHtml(desc)}</div>` : ''}
+    `;
+    openGrid.appendChild(card);
+  }
+}
+
+// ── Graph ──────────────────────────────────────────────────────
+tabsEl.addEventListener('sl-tab-show', async evt => {
+  const isGraph = evt.detail.name === 'graph';
+  fitBtn.style.display    = isGraph ? '' : 'none';
+  layoutSel.style.display = isGraph ? '' : 'none';
+  if (isGraph && !graphBuilt) { graphBuilt = true; await buildGraph(); }
+});
+
+async function buildGraph() {
+  let rows = [];
+  try { rows = [...store.query(Q_GRAPH)]; } catch (e) { console.warn('Q_GRAPH', e); }
+
+  // Knoten-Typen aus dem Store ableiten
+  const scopeIRIs = new Set();
+  try {
+    const scRows = [...store.query(`
+      PREFIX zahlung: <https://shop.example.org/zahlung#>
+      SELECT ?zm WHERE { ?zm zahlung:status "ausserScope" }
+    `)];
+    scRows.forEach(r => scopeIRIs.add(r.get('zm').value));
+  } catch (_) {}
+
+  const nodes = new Map();
+  const edges = [];
+  const seen  = new Set();
+
+  function addNode(iri, label, type) {
+    if (!nodes.has(iri)) nodes.set(iri, { data: { id: iri, label, type } });
+  }
+
+  for (const row of rows) {
+    const src  = row.get('source')?.value ?? '';
+    const tgt  = row.get('target')?.value ?? '';
+    const rel  = row.get('rel')?.value ?? '';
+    const srcL = row.get('sourceLabel')?.value ?? shortIri(src);
+    const tgtL = row.get('targetLabel')?.value ?? shortIri(tgt);
+    const srcT = row.get('sourceType')?.value ?? 'unknown';
+
+    if (src) {
+      const t = srcT === 'regel' ? 'regel'
+              : scopeIRIs.has(src) ? 'scope'
+              : 'zahlungsmethode';
+      addNode(src, srcL, t);
+    }
+    if (tgt) {
+      // Typ des Ziel-Knotens ermitteln
+      const isLand  = tgt.includes('zahlung#DE') || tgt.includes('zahlung#AT') ||
+                      tgt.includes('zahlung#CH') || tgt.includes('zahlung#UK');
+      const isGruppe= tgtL.includes('EU') || tgtL.includes('Länder') || tgtL.includes('Alle');
+      const isZM    = Object.keys(ZM_INFO).includes(tgt);
+      const t = isZM ? (scopeIRIs.has(tgt) ? 'scope' : 'zahlungsmethode')
+              : isGruppe ? 'laendergruppe'
+              : isLand ? 'land' : 'unknown';
+      addNode(tgt, tgtL, t);
+    }
+    if (src && tgt) {
+      const eid = `${src}→${rel}→${tgt}`;
+      if (!seen.has(eid)) {
+        seen.add(eid);
+        edges.push({ data: { id: eid, source: src, target: tgt, label: rel, relType: rel } });
+      }
+    }
+  }
+
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: { nodes: [...nodes.values()], edges },
+    style: cyStyle(),
+    layout: getLayout('cose'),
+    minZoom: 0.15, maxZoom: 5
+  });
+
+  cy.on('tap', 'node', evt => showDetail(evt.target));
+  cyStatus.style.display = 'none';
+}
+
+function cyStyle() {
+  return [
+    {
+      selector: 'node',
+      style: {
+        label: 'data(label)',
+        color: '#fff',
+        'text-valign': 'center', 'text-halign': 'center',
+        'font-size': '10px',
+        width: 'label', height: 'label', padding: '10px',
+        shape: 'roundrectangle',
+        'text-wrap': 'wrap', 'text-max-width': '120px',
+        'background-color': '#888',
+      }
+    },
+    { selector: 'node[type="zahlungsmethode"]', style: { 'background-color': '#3b5bdb', 'font-weight': 'bold', 'font-size': '11px' } },
+    { selector: 'node[type="regel"]',           style: { 'background-color': '#ae3ec9', shape: 'ellipse' } },
+    { selector: 'node[type="land"]',            style: { 'background-color': '#2f9e44' } },
+    { selector: 'node[type="laendergruppe"]',   style: { 'background-color': '#e67700', shape: 'hexagon' } },
+    { selector: 'node[type="scope"]',           style: { 'background-color': '#c92a2a', opacity: 0.75 } },
+    { selector: 'node:selected',                style: { 'border-width': 3, 'border-color': '#fff' } },
+    {
+      selector: 'edge',
+      style: {
+        width: 1.5,
+        'line-color': '#c0c8e0',
+        'target-arrow-color': '#c0c8e0',
+        'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier',
+        label: 'data(label)',
+        'font-size': '8px',
+        color: '#888',
+        'text-rotation': 'autorotate',
+        'text-margin-y': -6,
+      }
+    },
+    { selector: 'edge[relType="verfügbarInLand"]',   style: { 'line-color': '#3b5bdb', 'target-arrow-color': '#3b5bdb' } },
+    { selector: 'edge[relType="verfügbarInGruppe"]', style: { 'line-color': '#e67700', 'target-arrow-color': '#e67700' } },
+    { selector: 'edge[relType="betrifftZahlungsmethode"]', style: { 'line-color': '#ae3ec9', 'target-arrow-color': '#ae3ec9', 'line-style': 'dashed' } },
+  ];
+}
+
+function getLayout(name) {
+  return {
+    cose: { name: 'cose', animate: true, nodeRepulsion: () => 10000, idealEdgeLength: () => 130, gravity: 0.2, numIter: 1000 },
+    breadthfirst: { name: 'breadthfirst', directed: true, spacingFactor: 1.6 },
+    circle: { name: 'circle' },
+    concentric: { name: 'concentric', concentric: n => n.degree(), levelWidth: () => 2 },
+  }[name] || { name: 'cose', animate: true };
+}
+
+fitBtn.addEventListener('click', () => cy?.fit());
+layoutSel.addEventListener('sl-change', evt => cy?.layout(getLayout(evt.target.value)).run());
+
+// ── Detail-Drawer ──────────────────────────────────────────────
+function showDetail(node) {
+  const iri = node.id();
+  let html = `
+    <strong style="font-size:1rem;">${escHtml(node.data('label'))}</strong>
+    <div style="font-size:.75rem;color:#888;word-break:break-all;margin:.3rem 0 .75rem;">${escHtml(iri)}</div>
+  `;
+  try {
+    const props = [...store.query(`SELECT ?p ?o WHERE { <${iri}> ?p ?o . FILTER(!isBlank(?o)) }`)];
+    for (const r of props) {
+      const pLabel = shortIri(r.get('p').value);
+      const oVal   = r.get('o').value;
+      html += `<div class="prop"><strong>${escHtml(pLabel)}</strong>${escHtml(oVal)}</div>`;
+    }
+  } catch (_) {}
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('detail-drawer').show();
+}
+
+// ── Suche ──────────────────────────────────────────────────────
+searchEl.addEventListener('sl-input', () => {
+  const q = searchEl.value.toLowerCase();
+  document.querySelectorAll('.zm-card, .regel-card').forEach(el => {
+    el.style.display = (!q || el.dataset.search?.includes(q)) ? '' : 'none';
+  });
+});
+
+// ── Hilfsfunktionen ────────────────────────────────────────────
+function shortIri(iri) { return iri.split(/[/#]/).pop() || iri; }
+function escHtml(s)    { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showError(msg){
+  document.body.insertAdjacentHTML('afterbegin',
+    `<sl-alert variant="danger" open style="margin:1rem;">${escHtml(msg)}</sl-alert>`);
+}
+
+main().catch(err => showError(err.message));
+</script>
+</body>
+</html>
