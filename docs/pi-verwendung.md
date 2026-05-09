@@ -14,7 +14,7 @@ pi   # startet im aktuellen Verzeichnis
 
 ### Extensions (`.pi/extensions/`)
 
-Drei projektlokale Extensions greifen automatisch beim Start.
+Mehrere projektlokale Extensions greifen automatisch beim Start.
 
 #### `graph-gate`
 
