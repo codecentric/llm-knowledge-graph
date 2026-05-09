@@ -7,6 +7,7 @@
 
 @prefix zahlung: <https://shop.example.org/zahlung#> .
 @prefix :        <https://shop.example.org/glossary#> .
+@prefix meta:    <https://shop.example.org/meta#> .
 @prefix person:  <https://shop.example.org/personen#> .
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
 @prefix owl:     <http://www.w3.org/2002/07/owl#> .
@@ -84,10 +85,6 @@ zahlung:ausgeschlossenDurch a owl:ObjectProperty ;
     rdfs:range   :Zahlungsmethode ;
     dct:description "Zeigt an, dass eine Zahlungsmethode eine andere aus dem Scope ausschließt."@de .
 
-zahlung:ausserScopeGrund a owl:DatatypeProperty ;
-    rdfs:label  "außer-Scope-Grund"@de ;
-    rdfs:domain :Zahlungsmethode ;
-    rdfs:range  xsd:string .
 
 zahlung:betrifftKundentyp a owl:ObjectProperty ;
     rdfs:label  "betrifft Kundentyp"@de ;
@@ -104,16 +101,7 @@ zahlung:regelBegründung a owl:DatatypeProperty ;
     rdfs:domain :Zahlungsregel ;
     rdfs:range  xsd:string .
 
-zahlung:status a owl:DatatypeProperty ;
-    rdfs:label  "Status"@de ;
-    rdfs:range  xsd:string .
-
-# =============================================================================
-# Offene-Punkte-Klasse (analog zu versand:OffenerPunkt)
-# =============================================================================
-
-zahlung:OffenerPunkt a owl:Class ;
-    rdfs:label "Offener Punkt (Zahlung)"@de .
+# (scopeStatus und ausserScopeGrund: siehe meta.ttl)
 
 # =============================================================================
 # Zahlungsmethoden-Instanzen
@@ -163,9 +151,9 @@ zahlung:AllelaenderGruppe a owl:NamedIndividual ;
     dct:date                 "2024-03-05"^^xsd:date .
 
 # --- Ratenkauf (außer Scope) ---
-:Ratenkauf a owl:NamedIndividual ;
-    zahlung:status           "ausserScope" ;
-    zahlung:ausserScopeGrund "Von Thomas im Meeting 2024-03-05 angesprochen, jedoch vorerst aus dem Launch-Scope genommen."@de ;
+:Ratenkauf a owl:NamedIndividual, meta:AusserScope ;
+    meta:scopeStatus         "ausserScope" ;
+    meta:ausserScopeGrund    "Von Thomas im Meeting 2024-03-05 angesprochen, jedoch vorerst aus dem Launch-Scope genommen."@de ;
     dct:source               <inputs/meeting-checkout-versand.md> ;
     dct:contributor          person:Thomas ;
     dct:date                 "2024-03-05"^^xsd:date .
@@ -209,11 +197,11 @@ zahlung:Regel_Sofortueberweisung_DACH a :Zahlungsregel, owl:NamedIndividual ;
 # Offene Punkte
 # =============================================================================
 
-zahlung:OffenerPunkt_Ratenkauf a zahlung:OffenerPunkt, owl:NamedIndividual ;
+zahlung:OffenerPunkt_Ratenkauf a owl:NamedIndividual, meta:OffenerPunkt ;
     rdfs:label       "Ratenkauf: Scope-Entscheidung steht aus"@de ;
     dct:description  "Ratenkauf wurde von Thomas im Meeting erwähnt, aber vorerst aus dem Launch-Scope genommen. Kein finales Nein – Entscheidung für spätere Iteration offen."@de ;
     dct:created      "2024-03-05"^^xsd:date ;
-    zahlung:status   "offen" ;
+    meta:scopeStatus "offen" ;
     dct:contributor  person:Thomas ;
     dct:source       <inputs/meeting-checkout-versand.md> .
 

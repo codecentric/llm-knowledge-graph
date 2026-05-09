@@ -5,6 +5,7 @@
 
 @prefix :      <https://shop.example.org/glossary#> .
 @prefix versand: <https://shop.example.org/versand#> .
+@prefix meta:    <https://shop.example.org/meta#> .
 @prefix sh:    <http://www.w3.org/ns/shacl#> .
 @prefix owl:   <http://www.w3.org/2002/07/owl#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -390,31 +391,24 @@ versand:ExpressNurDEShape a sh:NodeShape ;
 # 6. Offene Punkte (als Annotationen im Graphen dokumentiert)
 # =============================================================================
 
-versand:OffenerPunkt_AT_CH_Schwellenwert a owl:NamedIndividual ;
-    rdf:type          versand:OffenerPunkt ;
+versand:OffenerPunkt_AT_CH_Schwellenwert a owl:NamedIndividual, meta:OffenerPunkt ;
     rdfs:label        "Offener Punkt: Kostenlos-Versand-Schwellenwert AT/CH"@de ;
     rdfs:comment      "Thomas prüft ob 99 € für AT und CH korrekt ist. Entscheidung stand zum Meeting-Zeitpunkt (2024-03-05) noch aus. Deadline: 2024-03-15."@de ;
     dct:created       "2024-03-05"^^xsd:date ;
     dct:source        "inputs/meeting-checkout-versand.md" ;
-    versand:betrifft  versand:AT, versand:CH ;
-    versand:status    "offen" .
+    meta:scopeStatus  "offen" ;
+    meta:betrifft     versand:AT, versand:CH .
 
-versand:OffenerPunkt_Spedition_Preis a owl:NamedIndividual ;
-    rdf:type          versand:OffenerPunkt ;
+versand:OffenerPunkt_Spedition_Preis a owl:NamedIndividual, meta:OffenerPunkt ;
     rdfs:label        "Offener Punkt: Preis Spedition Müller"@de ;
     rdfs:comment      "Der Aufpreis für Spedition Müller (Sperrgut) wurde im Meeting nicht genannt und ist im System noch nicht hinterlegt."@de ;
     dct:created       "2024-03-05"^^xsd:date ;
-    versand:betrifft  versand:Option_Spedition ;
-    versand:status    "offen" .
+    meta:scopeStatus  "offen" ;
+    meta:betrifft     versand:Option_Spedition .
 
-versand:OffenerPunkt_DPD_Lander a owl:NamedIndividual ;
-    rdf:type          versand:OffenerPunkt ;
+versand:OffenerPunkt_DPD_Lander a owl:NamedIndividual, meta:OffenerPunkt ;
     rdfs:label        "Offener Punkt: DPD Länderliste EU"@de ;
     rdfs:comment      "DPD liefert 'EU gesamt' – die vollständige Länderliste ist noch nicht als Instanzen im Graphen erfasst."@de ;
     dct:created       "2026-05-08"^^xsd:date ;
-    versand:betrifft  versand:DPD ;
-    versand:status    "offen" .
-
-versand:OffenerPunkt a owl:Class ;
-    rdfs:label   "Offener Punkt"@de ;
-    rdfs:comment "Klasse zur Dokumentation ungeklärter Fachentscheidungen direkt im Graphen."@de .
+    meta:scopeStatus  "offen" ;
+    meta:betrifft     versand:DPD .

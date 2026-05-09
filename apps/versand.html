@@ -401,19 +401,19 @@ const Q_REGELN = `
 `;
 
 const Q_OP = `
-  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX meta: <https://shop.example.org/meta#>
   PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
   PREFIX dct: <http://purl.org/dc/terms/>
   SELECT ?op ?label ?comment ?created ?status
          (GROUP_CONCAT(DISTINCT ?betrifftLabel; SEPARATOR="|") AS ?betrifft)
   WHERE {
-    ?op a versand:OffenerPunkt ;
+    ?op a meta:OffenerPunkt ;
         rdfs:label ?label .
     OPTIONAL { ?op rdfs:comment ?comment }
     OPTIONAL { ?op dct:created ?created }
-    OPTIONAL { ?op versand:status ?status }
+    OPTIONAL { ?op meta:scopeStatus ?status }
     OPTIONAL {
-      ?op versand:betrifft ?ref .
+      ?op meta:betrifft ?ref .
       BIND(STRAFTER(STR(?ref), "#") AS ?betrifftLabel)
     }
     FILTER(LANG(?label) = "de" || LANG(?label) = "")

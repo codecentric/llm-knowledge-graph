@@ -176,15 +176,15 @@ async function fetchTtl(path) {
   return res.text();
 }
 
-// ─── SPARQL: Konzepte mit offenen Fragen (via versand:betrifft) ─────────
+// ─── SPARQL: Konzepte mit offenen Fragen (via meta:betrifft) ─────────
 const SPARQL_OPEN_QUESTIONS = `
-  PREFIX versand: <https://shop.example.org/versand#>
+  PREFIX meta:    <https://shop.example.org/meta#>
   PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
   PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
   SELECT DISTINCT ?op ?concept ?opLabel ?opComment WHERE {
-    ?op a versand:OffenerPunkt ;
-        versand:betrifft ?concept ;
+    ?op a meta:OffenerPunkt ;
+        meta:betrifft ?concept ;
         rdfs:label       ?opLabel .
     OPTIONAL { ?op rdfs:comment ?opComment }
   }
@@ -293,7 +293,7 @@ async function main() {
     for (const r of tq) { titleEl.textContent = r.get('t').value; break; }
   } catch (_) {}
 
-  // Offene Fragen: Konzept-IRIs sammeln (via versand:betrifft + Definition-Keywords)
+  // Offene Fragen: Konzept-IRIs sammeln (via meta:betrifft + Definition-Keywords)
   try {
     for (const r of store.query(SPARQL_OPEN_QUESTIONS)) {
       const iri = r.get('concept')?.value ?? '';

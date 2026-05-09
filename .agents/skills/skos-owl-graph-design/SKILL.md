@@ -64,11 +64,12 @@ Innerhalb desselben Graphen: nie `closeMatch` als Ersatz für eine gemeinsame UR
 ### Dateistruktur
 
 ```
-glossary.ttl          ← SKOS-Basisvokabular (alle Konzepte, alle Domänen)
-versand.ttl           ← Fachdomäne Versandlogik
-rabatt.ttl            ← Fachdomäne Rabatt- & Preislogik
-checkout.ttl          ← Fachdomäne Checkout & Zahlungsmethoden
-personen/             ← Stakeholder (eine Datei pro Person)
+glossary.ttl          <- SKOS-Basisvokabular (alle Konzepte, alle Domänen)
+meta.ttl              <- Domänenunabhängiges Metavokabular (Scope, offene Punkte)
+versand.ttl           <- Fachdomäne Versandlogik
+rabatt.ttl            <- Fachdomäne Rabatt- & Preislogik
+checkout.ttl          <- Fachdomäne Checkout & Zahlungsmethoden
+personen/             <- Stakeholder (eine Datei pro Person)
 ```
 
 ### Regeln für den Modulschnitt
@@ -94,23 +95,20 @@ Properties und Instanzen gehören in den Modul-Namespace. Klassen gehören in de
 
 ## Prinzip 3: Offene Punkte gehören in den Graphen
 
-**Entscheidung:** Ungeklärte Fachentscheidungen werden nicht in Kommentaren oder Tickets versteckt, sondern als explizite Ressourcen im Graphen modelliert.
+**Entscheidung:** Ungeklärte Fachentscheidungen werden nicht in Kommentaren oder Tickets versteckt, sondern als explizite Ressourcen im Graphen modelliert — unter Verwendung des gemeinsamen Metavokabulars (Prinzip 8).
 
 ```turtle
-versand:OffenerPunkt a owl:Class ;
-    rdfs:label "Offener Punkt"@de .
-
-versand:OffenerPunkt_AT_CH_Schwellenwert a versand:OffenerPunkt ;
+versand:OffenerPunkt_AT_CH_Schwellenwert a owl:NamedIndividual, meta:OffenerPunkt ;
     rdfs:label       "Kostenlos-Versand-Schwellenwert AT/CH"@de ;
-    dct:description  "Thomas prüft ob 99 € korrekt ist. Deadline: 2024-03-15."@de ;
+    rdfs:comment     "Thomas prüft ob 99 Euro korrekt ist. Deadline: 2024-03-15."@de ;
     dct:created      "2024-03-05"^^xsd:date ;
-    versand:betrifft versand:AT, versand:CH ;
-    versand:status   "offen" .
+    meta:scopeStatus "offen" ;
+    meta:betrifft    versand:AT, versand:CH .
 ```
 
 ### Vorteile
 
-- SPARQL-abfragbar: alle offenen Punkte auf einen Blick
+- SPARQL-abfragbar: alle offenen Punkte auf einen Blick, domänenübergreifend
 - Direkt mit den betroffenen Ressourcen verknüpft
 - Bleibt im Graphen bis die Entscheidung getroffen und als `"geklärt"` markiert ist
 
@@ -168,8 +166,8 @@ Kommentare (`#`) sind erlaubt für Abschnittsüberschriften und Strukturhinweise
 
 ```
 personen/
-├── _vocab.ttl     ← gemeinsame Klassen & Properties (einmalig)
-├── sarah.ttl      ← eine Datei pro Person
+├── _vocab.ttl     <- gemeinsame Klassen & Properties (einmalig)
+├── sarah.ttl      <- eine Datei pro Person
 ├── marco.ttl
 ├── julia.ttl
 └── ...
@@ -199,7 +197,7 @@ dct:contributor "Julia (Logistik)" .
 dct:contributor person:Julia .
 ```
 
-Mit URIs sind Fragen wie *„Welche Regeln hat Julia definiert?"*, *„Welche offenen Punkte liegen bei Thomas?"* oder *„Wer hat Marcos Frage beantwortet?"* direkt per SPARQL beantwortbar.
+Mit URIs sind Fragen wie *"Welche Regeln hat Julia definiert?"*, *"Welche offenen Punkte liegen bei Thomas?"* oder *"Wer hat Marcos Frage beantwortet?"* direkt per SPARQL beantwortbar.
 
 ### Properties im `_vocab.ttl`
 
@@ -222,13 +220,14 @@ Mit URIs sind Fragen wie *„Welche Regeln hat Julia definiert?"*, *„Welche of
 
 1. Alle verwendeten Präfixe per `grep -o '[a-z]*:' datei.ttl | sort -u` ermitteln
 2. Für jeden Präfix prüfen ob `@prefix xyz: <...> .` oben in der Datei steht
-3. Keine typografischen Anführungszeichen (`„“`) innerhalb von Turtle-Literals – nur `"..."`; innere Anführungszeichen als einfache Hochkommas (`'`) oder mit `\"` escapen
+3. Keine typografischen Anführungszeichen (`„"`) innerhalb von Turtle-Literals – nur `"..."`; innere Anführungszeichen als einfache Hochkommas (`'`) oder mit `\"` escapen
 4. Nach dem Anlegen/Ändern validieren: `npm run validate`
 
 ### Standardsatz Prefixe für dieses Depot
 
 ```turtle
 @prefix :        <https://shop.example.org/glossary#> .
+@prefix meta:    <https://shop.example.org/meta#> .
 @prefix versand: <https://shop.example.org/versand#> .
 @prefix person:  <https://shop.example.org/personen#> .
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
@@ -247,6 +246,62 @@ Nur die tatsächlich verwendeten Prefixe einbinden, aber lieber einen zu viel al
 
 ---
 
+## Prinzip 8: Domänenunabhängiges Metavokabular in einer eigenen Datei
+
+**Entscheidung:** Properties und Klassen, die keine fachliche Domäne beschreiben, sondern den *Modellierungsstatus* von Ressourcen dokumentieren (z. B. "ausser Scope", "offen", "zurueckgestellt"), gehören nicht in ein Fachmodul. Sie werden in einer eigenen, zentralen Vokabular-Datei definiert.
+
+### Das Problem (Anti-Pattern)
+
+```turtle
+# ❌ FALSCH: Jedes Modul erfindet denselben Begriff neu
+versand:OffenerPunkt a owl:Class .        # in versand.ttl
+versand:status a owl:DatatypeProperty .   # in versand.ttl
+
+zahlung:OffenerPunkt a owl:Class .        # in zahlungsmethoden.ttl
+zahlung:status a owl:DatatypeProperty .   # in zahlungsmethoden.ttl
+zahlung:ausserScopeGrund a owl:DatatypeProperty .
+```
+
+Das ist Prinzip 1 auf Property-Ebene: dieselbe Semantik, mehrere URIs, keine Interoperabilität zwischen Modulen.
+
+### Die Lösung
+
+Eine zentrale Metavokabular-Datei mit eigenem Namespace, analog zu `personen/_vocab.ttl` — aber eine Ebene höher (projektweites Vokabular statt bereichsspezifischem):
+
+```turtle
+# ✅ RICHTIG: einmal definieren, überall verwenden
+meta:OffenerPunkt a owl:Class .
+meta:AusserScope  a owl:Class .
+
+meta:scopeStatus      a owl:DatatypeProperty ; rdfs:range xsd:string .
+meta:ausserScopeGrund a owl:DatatypeProperty ; rdfs:range xsd:string .
+meta:betrifft         a owl:ObjectProperty .
+```
+
+Fachmodule verwenden `meta:` direkt — ohne Redefinition:
+
+```turtle
+versand:OffenerPunkt_AT_CH a owl:NamedIndividual, meta:OffenerPunkt ;
+    meta:scopeStatus  "offen" ;
+    meta:betrifft     versand:AT .
+
+:Ratenkauf a owl:NamedIndividual, meta:AusserScope ;
+    meta:scopeStatus      "ausserScope" ;
+    meta:ausserScopeGrund "Vorerst aus dem Launch-Scope genommen."@de .
+```
+
+### Abgrenzung: Was gehört in die Metavokabular-Datei, was ins Fachmodul?
+
+| Metavokabular-Datei | Fachmodul |
+|---|---|
+| Scope-Status, Ausschluss-Begründung | Fachlicher Sperrgrund (z. B. Zollbeschränkung) |
+| Generische Klassen: `OffenerPunkt`, `AusserScope` | Domänenklassen: `Land`, `Versandpartner` |
+| Generische Verknüpfung `betrifft` (domain: `owl:Thing`) | Typisierte Verknüpfungen (z. B. `betrifftZahlungsmethode`) |
+
+Faustregel: Wenn eine Property sinnvoll auf Ressourcen *jeder* Domäne anwendbar ist, gehört sie in die Metavokabular-Datei.
+
+---
+
 ## Entscheidungslog
 
 | Datum | Entscheidung | Begründung |
@@ -258,3 +313,4 @@ Nur die tatsächlich verwendeten Prefixe einbinden, aber lieber einen zu viel al
 | 2026-05-08 | Metadaten als Tripel statt Kommentare (Prinzip 5) | Kommentare sind für Maschinen unsichtbar; Tripel sind abfragbar |
 | 2026-05-08 | Personen als foaf:Person-Ressourcen (Prinzip 6) | Strings sind tote Enden im Graph; URIs ermöglichen Navigation und Abfragen |
 | 2026-05-08 | Vollständige Prefix-Deklarationen pro Datei (Prinzip 7) | Dateien werden einzeln oder in beliebiger Kombination geladen; fehlende Prefixe führen zu Parse-Fehlern die erst zur Laufzeit sichtbar werden |
+| 2026-05-09 | Domänenunabhängiges Metavokabular in eigener Datei (Prinzip 8) | Properties wie scopeStatus/ausserScopeGrund betreffen alle Module; Redefinition pro Modul ist Prinzip-1-Verletzung auf Property-Ebene |

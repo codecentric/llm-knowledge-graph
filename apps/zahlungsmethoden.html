@@ -262,6 +262,7 @@ async function fetchTtl(path) {
 const Q_ZAHLUNGEN = `
 PREFIX zahlung: <https://shop.example.org/zahlung#>
 PREFIX :        <https://shop.example.org/glossary#>
+PREFIX meta:    <https://shop.example.org/meta#>
 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX dct:     <http://purl.org/dc/terms/>
 PREFIX owl:     <http://www.w3.org/2002/07/owl#>
@@ -276,8 +277,8 @@ WHERE {
   ))
   OPTIONAL { ?zm dct:description ?desc FILTER(lang(?desc)="de") }
   OPTIONAL { ?zm zahlung:bedingung ?bedingung }
-  OPTIONAL { ?zm zahlung:status ?scope }
-  OPTIONAL { ?zm zahlung:ausserScopeGrund ?scopeGrund }
+  OPTIONAL { ?zm meta:scopeStatus ?scope }
+  OPTIONAL { ?zm meta:ausserScopeGrund ?scopeGrund }
   OPTIONAL {
     ?zm zahlung:verfügbarInLand ?land .
     ?land rdfs:label ?landLabel FILTER(lang(?landLabel)="de")
@@ -310,14 +311,15 @@ SELECT ?regel ?label ?desc ?grund ?zmLabel WHERE {
 
 const Q_OPEN = `
 PREFIX zahlung: <https://shop.example.org/zahlung#>
+PREFIX meta:    <https://shop.example.org/meta#>
 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX dct:     <http://purl.org/dc/terms/>
 
 SELECT ?op ?label ?desc ?status WHERE {
-  ?op a zahlung:OffenerPunkt .
+  ?op a meta:OffenerPunkt .
   ?op rdfs:label ?label FILTER(lang(?label)="de")
   OPTIONAL { ?op dct:description ?desc FILTER(lang(?desc)="de") }
-  OPTIONAL { ?op zahlung:status ?status }
+  OPTIONAL { ?op meta:scopeStatus ?status }
 }
 `;
 
@@ -558,7 +560,8 @@ async function buildGraph() {
   try {
     const scRows = [...store.query(`
       PREFIX zahlung: <https://shop.example.org/zahlung#>
-      SELECT ?zm WHERE { ?zm zahlung:status "ausserScope" }
+      PREFIX meta:    <https://shop.example.org/meta#>
+      SELECT ?zm WHERE { ?zm meta:scopeStatus "ausserScope" }
     `)];
     scRows.forEach(r => scopeIRIs.add(r.get('zm').value));
   } catch (_) {}
