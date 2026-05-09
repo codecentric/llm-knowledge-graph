@@ -133,8 +133,7 @@
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Warenkorbwert"@de;
     skos:definition "Gesamtsumme aller Artikel im Warenkorb; Schwellenwert für kostenlosen Versand."@de;
-    skos:broader :Warenkorb;
-    skos:related :Kostenloser_Versand, :Bruttopreis.
+    skos:related :Warenkorb, :Kostenloser_Versand, :Bruttopreis.
 :Zahlungsmethode a skos:Concept;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Zahlungsmethode"@de;
@@ -197,8 +196,7 @@
     skos:prefLabel "Lieferzeit"@de;
     skos:altLabel "Lieferfrist"@de;
     skos:definition "Zeitspanne zwischen Bestelleingang und Lieferung beim Kunden, angegeben in Werktagen."@de;
-    skos:broader :Versandoption;
-    skos:related :Versandpartner.
+    skos:related :Versandpartner, :Versandoption.
 :Kostenloser_Versand a skos:Concept;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Kostenloser Versand"@de;
@@ -275,8 +273,7 @@
     skos:prefLabel "Rabattfrei"@de;
     skos:altLabel "keine Rabatte"@de;
     skos:definition "Eigenschaft von Produkten oder Kategorien (Lebensmittel, digitale Produkte), auf die keinerlei Rabatte angewendet werden dürfen – auch kein Treuerabatt; steuerlich begründet."@de;
-    skos:broader :Rabattlogik;
-    skos:related :Digitales_Produkt, :Lebensmittel.
+    skos:related :Rabattlogik, :Digitales_Produkt, :Lebensmittel.
 :Bundle a skos:Concept;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Bundle"@de;
@@ -293,8 +290,7 @@
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Versandpflichtig"@de;
     skos:definition "Eigenschaft einer Produktkategorie, die angibt, ob der Artikel physisch versandt werden muss."@de;
-    skos:broader :Produktkategorie;
-    skos:related :Physisches_Produkt, :Versandoption.
+    skos:related :Produktkategorie, :Physisches_Produkt, :Versandoption.
 :Checkout a skos:Concept;
     skos:inScheme :GlossaryScheme;
     skos:prefLabel "Checkout"@de;
