@@ -21,6 +21,7 @@ import fs   from "fs";
 import path from "path";
 import { createRequire } from "module";
 import { rdfParser } from "rdf-parse";
+import { QueryEngine } from "@comunica/query-sparql-file";
 
 // sparqljs ist CommonJS
 const require      = createRequire(import.meta.url);
@@ -81,6 +82,74 @@ function checkRq(filePath) {
   }
 }
 
+// ─── Punning-Check ───────────────────────────────────────────────────────────
+//
+// Prüft zwei Invarianten über alle TTL-Dateien zusammen:
+//
+// 1. KEIN DUPLIKAT-NAMESPACE:
+//    Instanzen außerhalb von glossary# dürfen nicht denselben rdfs:label
+//    wie ein bestehendes skos:Concept haben (= zahlung:Kreditkarte-Anti-Pattern).
+//
+// 2. PUNNING VOLLSTÄNDIG:
+//    Jedes Glossar-Konzept, das als rdf:type einer Instanz verwendet wird,
+//    muss auch als owl:Class deklariert sein.
+//
+// Läuft nur beim vollständigen Verzeichnis-Scan (nicht bei expliziten Dateien),
+// da beide Prüfungen mehrere Dateien gleichzeitig benötigen.
+
+async function checkPunning(ttlFiles) {
+  if (ttlFiles.length === 0) return [];
+  const engine   = new QueryEngine();
+  const sources  = ttlFiles.map(f => ({ type: "file", value: f }));
+  const failures = [];
+
+  // ── 1. Duplikat-Namespace ────────────────────────────────────────────────
+  const dupQuery = `
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    SELECT DISTINCT ?duplikat ?glossarLabel WHERE {
+      ?duplikat a owl:NamedIndividual .
+      FILTER(!STRSTARTS(STR(?duplikat), "https://shop.example.org/glossary#"))
+      { ?duplikat rdfs:label ?name } UNION { ?duplikat <http://www.w3.org/2004/02/skos/core#prefLabel> ?name }
+      ?glossarKonzept a skos:Concept ; skos:prefLabel ?glossarLabel .
+      FILTER(LCASE(STR(?name)) = LCASE(STR(?glossarLabel)))
+    } ORDER BY ?glossarLabel`;
+
+  const dupResult = await engine.queryBindings(dupQuery, { sources });
+  const dupRows   = await dupResult.toArray();
+  for (const row of dupRows) {
+    failures.push(
+      `Duplikat-Namespace: <${row.get("duplikat").value}> ` +
+      `dupliziert Glossar-Konzept "${row.get("glossarLabel").value}" – ` +
+      `stattdessen Glossar-URI direkt als owl:NamedIndividual verwenden (Punning).`
+    );
+  }
+
+  // ── 2. Fehlendes owl:Class-Punning ──────────────────────────────────────
+  const owlClassQuery = `
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+    SELECT DISTINCT ?konzept ?label WHERE {
+      ?konzept a skos:Concept ; skos:prefLabel ?label .
+      ?instanz a ?konzept .
+      FILTER NOT EXISTS { ?konzept a owl:Class }
+      FILTER(STRSTARTS(STR(?konzept), "https://shop.example.org/glossary#"))
+    } ORDER BY ?label`;
+
+  const owlClassResult = await engine.queryBindings(owlClassQuery, { sources });
+  const owlClassRows   = await owlClassResult.toArray();
+  for (const row of owlClassRows) {
+    failures.push(
+      `Fehlendes owl:Class: <${row.get("konzept").value}> ("${row.get("label").value}") ` +
+      `wird als rdf:type verwendet, ist aber nicht als owl:Class deklariert. ` +
+      `→ Im Glossar ergänzen: :${row.get("konzept").value.split("#")[1]} a owl:Class .`
+    );
+  }
+
+  return failures;
+}
+
 // ─── Dateiliste aufbauen ──────────────────────────────────────────────────────
 
 let ttlFiles, rqFiles;
@@ -96,6 +165,12 @@ if (explicitFiles.length > 0) {
 }
 
 // ─── Prüfungen ausführen ──────────────────────────────────────────────────────
+
+// Punning-Check nur beim vollständigen Scan (nicht bei expliziten Einzeldateien)
+let punnErrors = [];
+if (explicitFiles.length === 0 && ttlFiles.length > 0) {
+  punnErrors = await checkPunning(ttlFiles);
+}
 
 let errors = 0;
 const total = ttlFiles.length + rqFiles.length;
@@ -131,6 +206,14 @@ if (rqFiles.length > 0) {
       console.log(`      ${msg}`);
       errors++;
     }
+  }
+}
+
+if (punnErrors.length > 0) {
+  console.log(`\n📂 Punning-Check\n`);
+  for (const msg of punnErrors) {
+    console.log(`   ❌ ${msg}`);
+    errors++;
   }
 }
 
