@@ -153,6 +153,16 @@ npm run query -- --help     # Hilfe
 
 ---
 
+## pi – AI-Agent-Integration
+
+Dieses Repository enthält eine projektspezifische Konfiguration für **pi** (Terminal-Coding-Tool)
+mit Extensions, Skills und Agenten-Instruktionen, die den Graph-first-Workflow erzwingen
+und komfortabel machen.
+
+→ [docs/pi-verwendung.md](docs/pi-verwendung.md)
+
+---
+
 ## Weiterführend
 
 Dieser Code begleitet den Artikel:
