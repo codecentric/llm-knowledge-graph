@@ -14,7 +14,8 @@
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
 @prefix dct:    <http://purl.org/dc/terms/> .
 @prefix schema: <https://schema.org/> .
-@prefix person: <https://shop.example.org/personen#> .
+@prefix person:  <https://shop.example.org/personen#> .
+@prefix zahlung: <https://shop.example.org/zahlung#> .
 
 # -----------------------------------------------------------------------------
 # 1. Ontologie-Header
@@ -138,18 +139,18 @@ versand:istVersandpflichtig a owl:DatatypeProperty ;
 # --- Länder ------------------------------------------------------------------
 
 versand:DE a versand:Land ;
-    rdfs:label                         "Deutschland"@de ;
+    rdfs:label                         "Versand nach Deutschland"@de ;
     schema:identifier                  "DE" ;
     versand:kostenlosAbWarenkorbwert   49.00 .
 
 versand:AT a versand:Land ;
-    rdfs:label  "Österreich"@de ;
+    rdfs:label  "Versand nach Österreich"@de ;
     schema:identifier "AT" ;
     versand:kostenlosAbWarenkorbwert   99.00 ;
     dct:description  "Schwellenwert 99 € noch nicht final bestätigt (Thomas, Deadline 2024-03-15)."@de .
 
 versand:CH a versand:Land ;
-    rdfs:label  "Schweiz"@de ;
+    rdfs:label  "Versand in die Schweiz"@de ;
     schema:identifier "CH" ;
     versand:kostenlosAbWarenkorbwert   99.00 ;
     dct:description  "Schwellenwert 99 € noch nicht final bestätigt (Thomas, Deadline 2024-03-15)."@de .
