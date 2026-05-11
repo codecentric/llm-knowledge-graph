@@ -1,0 +1,13 @@
+# Überblick: Tripel, Klassen, Konzepte
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT
+  (COUNT(?s) AS ?tripel)
+  (COUNT(DISTINCT ?klasse) AS ?klassen)
+  (COUNT(DISTINCT ?konzept) AS ?konzepte)
+WHERE {
+  { ?s ?p ?o }
+  OPTIONAL { ?klasse a owl:Class }
+  OPTIONAL { ?konzept a skos:Concept }
+}
