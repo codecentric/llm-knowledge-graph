@@ -340,49 +340,15 @@ PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX owl:     <http://www.w3.org/2002/07/owl#>
 PREFIX dct:     <http://purl.org/dc/terms/>
 
-SELECT ?source ?sourceLabel ?sourceType ?target ?targetLabel ?rel WHERE {
-  {
-    # Zahlungsmethode → Land (verfügbarInLand)
-    ?source a owl:NamedIndividual .
-    FILTER(?source IN (
-      <https://shop.example.org/glossary#Kreditkarte>,
-      <https://shop.example.org/glossary#PayPal>,
-      <https://shop.example.org/glossary#Rechnung>,
-      <https://shop.example.org/glossary#Sofortuberweisung>,
-      <https://shop.example.org/glossary#Ratenkauf>
-    ))
-    ?source zahlung:verfügbarInLand ?target .
-    ?target rdfs:label ?targetLabel FILTER(lang(?targetLabel)="de")
-    BIND("verfügbarInLand" AS ?rel)
-    BIND("zahlungsmethode" AS ?sourceType)
-  }
-  UNION {
-    # Zahlungsmethode → Ländergruppe
-    ?source a owl:NamedIndividual .
-    FILTER(?source IN (
-      <https://shop.example.org/glossary#Kreditkarte>,
-      <https://shop.example.org/glossary#PayPal>,
-      <https://shop.example.org/glossary#Rechnung>,
-      <https://shop.example.org/glossary#Sofortuberweisung>,
-      <https://shop.example.org/glossary#Ratenkauf>
-    ))
-    ?source zahlung:verfügbarInLaendergruppe ?target .
-    ?target rdfs:label ?targetLabel FILTER(lang(?targetLabel)="de")
-    BIND("verfügbarInGruppe" AS ?rel)
-    BIND("zahlungsmethode" AS ?sourceType)
-  }
-  UNION {
-    # Regel → Zahlungsmethode
-    ?source a <https://shop.example.org/glossary#Zahlungsregel> .
-    ?source rdfs:label ?sourceLabel FILTER(lang(?sourceLabel)="de")
-    ?source zahlung:betrifftZahlungsmethode ?target .
-    BIND("betrifftZahlungsmethode" AS ?rel)
-    BIND("regel" AS ?sourceType)
-  }
-  OPTIONAL {
-    FILTER(?sourceType != "regel")
-    BIND(STRAFTER(STR(?source), "#") AS ?sourceLabel)
-  }
+SELECT ?source ?target ?rel WHERE {
+  ?source ?p ?target .
+  FILTER(isIRI(?source) && isIRI(?target))
+  FILTER(
+    STRSTARTS(STR(?p), "https://shop.example.org/") ||
+    ?p = rdfs:member
+  )
+  FILTER(?p NOT IN (rdfs:domain, rdfs:range, rdfs:subClassOf, owl:inverseOf))
+  BIND(STRAFTER(STR(?p), "#") AS ?rel)
 }
 `;
 
@@ -584,37 +550,53 @@ async function buildGraph() {
     if (!nodes.has(iri)) nodes.set(iri, { data: { id: iri, label, type } });
   }
 
-  for (const row of rows) {
-    const src  = row.get('source')?.value ?? '';
-    const tgt  = row.get('target')?.value ?? '';
-    const rel  = row.get('rel')?.value ?? '';
-    const srcL = row.get('sourceLabel')?.value ?? shortIri(src);
-    const tgtL = row.get('targetLabel')?.value ?? shortIri(tgt);
-    const srcT = row.get('sourceType')?.value ?? 'unknown';
+  // Labels aller IRIs aus dem Store holen
+  const labelMap = new Map();
+  for (const r of store.query(`PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> SELECT ?s ?l WHERE { ?s rdfs:label ?l FILTER(lang(?l)="de") }`)) {
+    labelMap.set(r.get('s').value, r.get('l').value);
+  }
 
-    if (src) {
-      const t = srcT === 'regel' ? 'regel'
-              : scopeIRIs.has(src) ? 'scope'
-              : 'zahlungsmethode';
-      addNode(src, srcL, t);
-    }
-    if (tgt) {
-      // Typ des Ziel-Knotens ermitteln
-      const isLand  = tgt.includes('zahlung#DE') || tgt.includes('zahlung#AT') ||
-                      tgt.includes('zahlung#CH') || tgt.includes('zahlung#UK');
-      const isGruppe= tgtL.includes('EU') || tgtL.includes('Länder') || tgtL.includes('Alle');
-      const isZM    = Object.keys(ZM_INFO).includes(tgt);
-      const t = isZM ? (scopeIRIs.has(tgt) ? 'scope' : 'zahlungsmethode')
-              : isGruppe ? 'laendergruppe'
-              : isLand ? 'land' : 'unknown';
-      addNode(tgt, tgtL, t);
-    }
-    if (src && tgt) {
-      const eid = `${src}→${rel}→${tgt}`;
-      if (!seen.has(eid)) {
-        seen.add(eid);
-        edges.push({ data: { id: eid, source: src, target: tgt, label: rel, relType: rel } });
-      }
+  // Typen aller IRIs aus dem Store holen
+  const typeMap = new Map();
+  for (const r of store.query(`
+    PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+    PREFIX zahlung: <https://shop.example.org/zahlung#>
+    PREFIX versand: <https://shop.example.org/versand#>
+    PREFIX :        <https://shop.example.org/glossary#>
+    SELECT ?iri ?cls WHERE { ?iri rdf:type ?cls }
+  `)) {
+    const iri = r.get('iri').value;
+    const cls = r.get('cls').value;
+    if (!typeMap.has(iri)) typeMap.set(iri, cls);
+  }
+
+  function nodeType(iri) {
+    if (scopeIRIs.has(iri)) return 'scope';
+    const cls = typeMap.get(iri) ?? '';
+    if (cls.endsWith('#Zahlungsregel'))  return 'regel';
+    if (cls.endsWith('#EU_Laender'))     return 'laendergruppe';
+    if (cls === 'http://www.w3.org/2002/07/owl#Class') return 'laendergruppe';
+    if (cls.endsWith('#Land'))           return 'land';
+    return 'zahlungsmethode';
+  }
+
+  for (const row of rows) {
+    const src = row.get('source')?.value ?? '';
+    const tgt = row.get('target')?.value ?? '';
+    const rel = row.get('rel')?.value ?? '';
+    if (!src || !tgt) continue;
+
+    const srcL = labelMap.get(src) ?? shortIri(src);
+    const tgtL = labelMap.get(tgt) ?? shortIri(tgt);
+
+    addNode(src, srcL, nodeType(src));
+    addNode(tgt, tgtL, nodeType(tgt));
+
+    const eid = `${src}→${rel}→${tgt}`;
+    if (!seen.has(eid)) {
+      seen.add(eid);
+      edges.push({ data: { id: eid, source: src, target: tgt, label: rel, relType: rel } });
     }
   }
 
@@ -669,6 +651,7 @@ function cyStyle() {
     { selector: 'edge[relType="verfügbarInLand"]',   style: { 'line-color': '#3b5bdb', 'target-arrow-color': '#3b5bdb' } },
     { selector: 'edge[relType="verfügbarInGruppe"]', style: { 'line-color': '#e67700', 'target-arrow-color': '#e67700' } },
     { selector: 'edge[relType="betrifftZahlungsmethode"]', style: { 'line-color': '#ae3ec9', 'target-arrow-color': '#ae3ec9', 'line-style': 'dashed' } },
+    { selector: 'edge[relType="hatMitglied"]', style: { 'line-color': '#e67700', 'target-arrow-color': '#e67700', 'line-style': 'dotted', 'width': 2 } },
   ];
 }
 
