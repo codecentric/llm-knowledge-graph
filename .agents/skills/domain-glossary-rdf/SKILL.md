@@ -51,11 +51,14 @@ TEXT:
 
 ### Schritt 3 – RDF/Turtle serialisieren
 
-Das JSON-Array aus Schritt 2 an den Serialisierer übergeben:
+Das JSON-Array aus Schritt 2 an den Serialisierer übergeben.
+
+> **Konvention:** Die Ausgabedatei heißt immer **`graph/glossar.ttl`** – so wird sie
+> automatisch von `apps/glossar.html` geladen. Niemals einen anderen Dateinamen verwenden.
 
 ```bash
 echo '<JSON-Array>' | node .agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
-  --output glossary.ttl \
+  --output graph/glossar.ttl \
   --namespace "https://example.org/glossary#" \
   --lang de \
   --title "Mein Fachglossar"
@@ -66,7 +69,7 @@ Oder als Datei:
 ```bash
 node .agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
   --input concepts.json \
-  --output glossary.ttl \
+  --output graph/glossar.ttl \
   --namespace "https://example.org/glossary#" \
   --lang de
 ```
@@ -76,7 +79,7 @@ node .agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
 | Option | Standard | Beschreibung |
 |--------|----------|--------------|
 | `--input` | stdin | JSON-Datei oder `-` für stdin |
-| `--output` | `glossary.ttl` | Ausgabedatei (Turtle) |
+| `--output` | `graph/glossar.ttl` | Ausgabedatei (Turtle) – **immer dieser Pfad** |
 | `--namespace` | `https://example.org/glossary#` | Basis-IRI für Konzepte |
 | `--lang` | `de` | Sprach-Tag für Labels (`de`, `en`, …) |
 | `--title` | `Domain Glossary` | Titel des ConceptScheme |
@@ -85,7 +88,7 @@ node .agents/skills/domain-glossary-rdf/scripts/to-turtle.js \
 ### Schritt 4 – Ergebnis prüfen
 
 ```bash
-node .agents/skills/domain-glossary-rdf/scripts/show-concepts.js glossary.ttl
+node .agents/skills/domain-glossary-rdf/scripts/show-concepts.js graph/glossar.ttl
 ```
 
 ## Verwendetes RDF-Vokabular

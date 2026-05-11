@@ -1,0 +1,56 @@
+@prefix :     <https://example.org/glossar#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------------------------------------------------------------------------
+# Ontologie-Header
+# ---------------------------------------------------------------------------
+
+<https://example.org/glossar>
+    a owl:Ontology ;
+    dct:title        "Beispielglossar" ;
+    dct:description  "Minimales Startglossar – Konzepte durch echte Domänenbegriffe ersetzen." ;
+    owl:versionInfo  "0.1.0" .
+
+# ---------------------------------------------------------------------------
+# Concept Scheme
+# ---------------------------------------------------------------------------
+
+:GlossaryScheme
+    a skos:ConceptScheme ;
+    skos:prefLabel "Beispielglossar"@de ;
+    skos:hasTopConcept :KonzeptA, :KonzeptB .
+
+# ---------------------------------------------------------------------------
+# Top-Level-Konzepte
+# ---------------------------------------------------------------------------
+
+:KonzeptA
+    a skos:Concept ;
+    skos:inScheme     :GlossaryScheme ;
+    skos:topConceptOf :GlossaryScheme ;
+    skos:prefLabel    "Konzept A"@de ;
+    skos:definition   "Platzhalter für den ersten zentralen Domänenbegriff."@de ;
+    skos:narrower     :KonzeptA1 .
+
+:KonzeptB
+    a skos:Concept ;
+    skos:inScheme     :GlossaryScheme ;
+    skos:topConceptOf :GlossaryScheme ;
+    skos:prefLabel    "Konzept B"@de ;
+    skos:definition   "Platzhalter für den zweiten zentralen Domänenbegriff."@de ;
+    skos:related      :KonzeptA .
+
+# ---------------------------------------------------------------------------
+# Untergeordnetes Konzept (Beispiel für Hierarchie)
+# ---------------------------------------------------------------------------
+
+:KonzeptA1
+    a skos:Concept ;
+    skos:inScheme  :GlossaryScheme ;
+    skos:prefLabel "Konzept A1"@de ;
+    skos:definition "Spezialisierung von Konzept A."@de ;
+    skos:broader   :KonzeptA .

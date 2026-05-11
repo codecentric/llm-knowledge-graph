@@ -1,4 +1,6 @@
 # Alle SKOS-Konzepte im Graph
+# Ausführen: node .agents/skills/sparql-query/scripts/query.js --file graph/glossar.ttl --query queries/example/alle-konzepte.rq
+
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
 SELECT ?konzept ?label ?definition WHERE {
