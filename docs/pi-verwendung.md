@@ -21,7 +21,7 @@ Mehrere projektlokale Extensions greifen automatisch beim Start.
 Eine projektlokale Extension, die **direktes Lesen von `.ttl`-Dateien via `read`-Tool blockiert** und stattdessen auf den SPARQL-Weg umleitet. Das verhindert, dass der Agent TTL-Dateien als Plaintext interpretiert statt sie semantisch abzufragen.
 
 ```
-Agent versucht read("graph/versand.ttl")
+Agent versucht read("graph/<modul>.ttl")
   → graph-gate blockiert
   → Fehlermeldung mit korrektem SPARQL-Befehl als Hinweis
 ```
@@ -51,7 +51,7 @@ Der Browser lädt alle TTL-Dateien aus `graph/` per SPARQL, zeigt Konzepte, Klas
 Führt nach jeder `write`- oder `edit`-Operation auf einer `.ttl`-Datei **automatisch die SHACL-Validierung** durch und konfrontiert den Agenten sofort mit Verstößen – bevor er mit der nächsten Aktion fortfährt.
 
 ```
-Agent schreibt graph/versand.ttl  (write oder edit)
+Agent schreibt graph/<modul>.ttl  (write oder edit)
   → shacl-guard startet validate-shacl.js
   → sh:Violation → isError: true   (Agent muss korrigieren)
   → sh:Warning   → isError: false  (Hinweis, kein harter Fehler)
@@ -97,7 +97,7 @@ Der Agent lädt einen Skill automatisch, wenn die Aufgabe dazu passt – oder au
 **Kernbefehl aus `sparql-query`:**
 ```bash
 node .agents/skills/sparql-query/scripts/query.js \
-  --file graph/versand.ttl \
+  --file graph/<modul>.ttl \
   --sparql "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10"
 ```
 
