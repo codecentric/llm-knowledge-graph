@@ -18,7 +18,8 @@
 
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   type AutocompleteItem,
@@ -49,7 +50,10 @@ interface PropRow {
 // SPARQL-Helpers (identisch zu kg-browser)
 // ---------------------------------------------------------------------------
 
-const SKILL_SCRIPT = resolve("/workspace/.agents/skills/sparql-query/scripts/query.js");
+// __dirname-Äquivalent für ESM; von .pi/extensions/kg-mention/ drei Ebenen hoch zum Workspace-Root
+const __dir = dirname(fileURLToPath(import.meta.url));
+const WORKSPACE_ROOT = resolve(__dir, "../../..");
+const SKILL_SCRIPT = resolve(WORKSPACE_ROOT, ".agents/skills/sparql-query/scripts/query.js");
 
 function findTtlFiles(cwd: string): string[] {
   try {
@@ -78,7 +82,7 @@ function sparqlQuery(files: string[], query: string): any[] {
       .replace(/\n/g, " ");
     const out = execSync(
       `node "${SKILL_SCRIPT}" ${fileArgs} --sparql "${escaped}" --format json`,
-      { cwd: "/workspace", timeout: 15000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+      { cwd: WORKSPACE_ROOT, timeout: 15000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
     return JSON.parse(out) ?? [];
   } catch {
