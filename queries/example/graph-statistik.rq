@@ -1,6 +1,4 @@
 # Überblick: Tripel, Klassen, Konzepte
-# Ausführen: node .agents/skills/sparql-query/scripts/query.js --file graph/glossar.ttl --query queries/example/graph-statistik.rq
-
 PREFIX owl:  <http://www.w3.org/2002/07/owl#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
