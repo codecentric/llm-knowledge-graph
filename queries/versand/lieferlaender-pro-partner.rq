@@ -1,0 +1,22 @@
+# Welcher Versandpartner liefert in welche Länder?
+#
+# Datei: graph/versand.ttl
+# Ausführen:
+#   node .agents/skills/sparql-query/scripts/query.js \
+#     --file graph/versand.ttl \
+#     --query queries/versand/lieferlaender-pro-partner.rq
+
+PREFIX versand: <https://shop.example.org/versand#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX schema:  <https://schema.org/>
+PREFIX :        <https://shop.example.org/glossary#>
+
+SELECT ?partnerName ?landName ?isoCode
+WHERE {
+  ?partner a :Versandpartner ;
+           rdfs:label ?partnerName ;
+           versand:liefertIn ?land .
+  ?land rdfs:label ?landName .
+  OPTIONAL { ?land schema:identifier ?isoCode . }
+}
+ORDER BY ?partnerName ?landName

@@ -1,0 +1,85 @@
+# =============================================================================
+# meta.ttl – Projektweites Metavokabular für Fachentscheidungen
+#
+# Dieses Modul definiert domänenunabhängige Klassen und Properties zur
+# Dokumentation von Fachentscheidungen – unabhängig davon ob sie Versand,
+# Zahlungsmethoden oder andere Domänen betreffen.
+#
+# Analog zu personen/_vocab.ttl, aber eine Ebene höher:
+#   personen/_vocab.ttl  → personen-spezifisches Vokabular
+#   meta.ttl             → projektweites Entscheidungs-Metavokabular
+# =============================================================================
+
+@prefix meta:    <https://shop.example.org/meta#> .
+@prefix :        <https://shop.example.org/glossary#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+
+# =============================================================================
+# Ontologie-Header
+# =============================================================================
+
+<https://shop.example.org/meta> a owl:Ontology ;
+    dct:title       "Metavokabular – Fachentscheidungen"@de ;
+    dct:description "Domänenunabhängige Klassen und Properties zur Dokumentation von Scope-Entscheidungen und offenen Punkten im Knowledge Graph."@de ;
+    dct:created     "2026-05-09"^^xsd:date .
+
+
+# =============================================================================
+# Klassen
+# =============================================================================
+
+meta:OffenerPunkt a owl:Class ;
+    rdfs:label   "Offener Punkt"@de ;
+    rdfs:comment "Eine ungeklärte Fachentscheidung, die explizit im Graph dokumentiert ist und noch beantwortet werden muss."@de .
+
+meta:AusserScope a owl:Class ;
+    rdfs:label   "Außer Scope"@de ;
+    rdfs:comment "Eine bewusste Entscheidung, ein Konzept oder Feature nicht im aktuellen Scope umzusetzen – kein endgültiges Nein, sondern eine Iteration-Entscheidung."@de .
+
+
+# =============================================================================
+# Properties
+# =============================================================================
+
+meta:scopeStatus a owl:DatatypeProperty ;
+    rdfs:label   "Scope-Status"@de ;
+    rdfs:comment "Klassifiziert eine Ressource nach ihrem Umsetzungsstatus. Erlaubte Werte: 'aktiv', 'ausserScope', 'zurueckgestellt', 'offen'."@de ;
+    rdfs:range   xsd:string .
+
+meta:ausserScopeGrund a owl:DatatypeProperty ;
+    rdfs:label   "Außer-Scope-Grund"@de ;
+    rdfs:comment "Begründung warum eine Ressource aus dem aktuellen Scope genommen wurde. Nur relevant wenn scopeStatus = 'ausserScope' oder 'zurueckgestellt'."@de ;
+    rdfs:range   xsd:string .
+
+meta:betrifft a owl:ObjectProperty ;
+    rdfs:label   "betrifft"@de ;
+    rdfs:comment "Verknüpft einen offenen Punkt oder eine Scope-Entscheidung mit der betroffenen Ressource im Graph."@de ;
+    rdfs:domain  owl:Thing ;
+    rdfs:range   owl:Thing .
+
+
+# =============================================================================
+# SHACL – Konsistenzregeln für das Metavokabular
+# =============================================================================
+
+# Wenn scopeStatus = 'ausserScope', muss ein ausserScopeGrund angegeben sein.
+meta:AusserScopeGrundPflichtShape a sh:NodeShape ;
+    sh:targetSubjectsOf meta:scopeStatus ;
+    rdfs:label   "Regel: ausserScopeGrund bei Status 'ausserScope' Pflicht"@de ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message  "Wenn scopeStatus = 'ausserScope', muss meta:ausserScopeGrund angegeben sein."@de ;
+        sh:severity sh:Warning ;
+        sh:select   """
+            PREFIX meta: <https://shop.example.org/meta#>
+            SELECT $this WHERE {
+                $this meta:scopeStatus "ausserScope" .
+                FILTER NOT EXISTS { $this meta:ausserScopeGrund ?grund }
+            }
+        """ ;
+    ] .

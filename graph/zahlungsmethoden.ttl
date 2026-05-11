@@ -1,0 +1,300 @@
+# =============================================================================
+# Fachdomäne: Zahlungsmethoden & Zahlungsregeln
+# Quelle:     inputs/meeting-checkout-versand.md (Meeting 2024-03-05)
+#             inputs/slack-export-preisregeln.md (Slack #projekt-shop-regeln, 2024-02-12)
+# Namespace:  https://shop.example.org/zahlung#
+# =============================================================================
+
+@prefix zahlung: <https://shop.example.org/zahlung#> .
+@prefix :        <https://shop.example.org/glossary#> .
+@prefix meta:    <https://shop.example.org/meta#> .
+@prefix person:  <https://shop.example.org/personen#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix versand: <https://shop.example.org/versand#> .
+
+# =============================================================================
+# Ontologie-Header
+# =============================================================================
+
+<https://shop.example.org/zahlung>
+    a owl:Ontology ;
+    rdfs:label       "Zahlungsmethoden & Zahlungsregeln"@de ;
+    dct:description  "Modelliert Zahlungsmethoden, ihre Länderverfügbarkeit, Kundenbedingungen und Ausschlussregeln für den Shop-Checkout."@de ;
+    dct:source       <inputs/meeting-checkout-versand.md> ;
+    dct:created      "2024-03-05"^^xsd:date ;
+    owl:imports      <https://shop.example.org/glossary> .
+
+# =============================================================================
+# Klassen (Punning: Glossar-URIs werden hier als owl:Class ausgerollt)
+# =============================================================================
+
+# :Zahlungsmethode existiert bereits als skos:Concept im Glossar – Punning:
+:Zahlungsmethode a owl:Class .
+
+# :Zahlungsregel ist neu (kein Glossar-Eintrag), daher vollständig hier:
+:Zahlungsregel a skos:Concept, owl:Class ;
+    rdfs:label      "Zahlungsregel"@de ;
+    skos:definition "Bedingung oder Einschränkung, unter der eine Zahlungsmethode verfügbar oder gesperrt ist."@de .
+
+# =============================================================================
+# Länder-Instanzen (analog zu versand.ttl, nur die für Zahlung relevanten)
+# =============================================================================
+
+zahlung:Land a owl:Class ;
+    rdfs:label "Land (Zahlung)"@de .
+
+zahlung:DE a zahlung:Land ; rdfs:label "Deutschland"@de .
+zahlung:AT a zahlung:Land ; rdfs:label "Österreich"@de .
+zahlung:CH a zahlung:Land ; rdfs:label "Schweiz"@de .
+zahlung:UK a zahlung:Land ; rdfs:label "Vereinigtes Königreich"@de .
+
+zahlung:EU_Laender a owl:Class ;
+    rdfs:label      "EU-Ländergruppe"@de ;
+    dct:description "Sammelkonzept für alle EU-Mitgliedsstaaten;"@de ;
+    rdfs:member     zahlung:DE, zahlung:AT .
+
+# =============================================================================
+# Properties
+# =============================================================================
+
+zahlung:verfügbarInLand a owl:ObjectProperty ;
+    rdfs:label   "verfügbar in Land"@de ;
+    rdfs:domain  :Zahlungsmethode ;
+    rdfs:range   zahlung:Land ;
+    dct:description "Verknüpft eine Zahlungsmethode mit einem Land, in dem sie angeboten wird."@de .
+
+zahlung:verfügbarInLaendergruppe a owl:ObjectProperty ;
+    rdfs:label   "verfügbar in Ländergruppe"@de ;
+    rdfs:domain  :Zahlungsmethode ;
+    rdfs:range   zahlung:EU_Laender ;
+    dct:description "Verknüpft eine Zahlungsmethode mit einer ganzen Ländergruppe (z. B. EU)."@de .
+
+zahlung:bedingung a owl:DatatypeProperty ;
+    rdfs:label   "Bedingung"@de ;
+    rdfs:domain  :Zahlungsmethode ;
+    rdfs:range   xsd:string ;
+    dct:description "Freitext-Bedingung für die Verfügbarkeit der Zahlungsmethode (Übergangslösung bis zur vollständigen OWL-Modellierung)."@de .
+
+zahlung:ausgeschlossenDurch a owl:ObjectProperty ;
+    rdfs:label   "ausgeschlossen durch"@de ;
+    rdfs:domain  :Zahlungsmethode ;
+    rdfs:range   :Zahlungsmethode ;
+    dct:description "Zeigt an, dass eine Zahlungsmethode eine andere aus dem Scope ausschließt."@de .
+
+
+zahlung:betrifftKundentyp a owl:ObjectProperty ;
+    rdfs:label  "betrifft Kundentyp"@de ;
+    rdfs:domain :Zahlungsregel ;
+    rdfs:range  owl:Thing .
+
+zahlung:betrifftZahlungsmethode a owl:ObjectProperty ;
+    rdfs:label  "betrifft Zahlungsmethode"@de ;
+    rdfs:domain :Zahlungsregel ;
+    rdfs:range  :Zahlungsmethode .
+
+zahlung:regelBegründung a owl:DatatypeProperty ;
+    rdfs:label  "Regelbegründung"@de ;
+    rdfs:domain :Zahlungsregel ;
+    rdfs:range  xsd:string .
+
+# (scopeStatus und ausserScopeGrund: siehe meta.ttl)
+
+# =============================================================================
+# Zahlungsmethoden-Instanzen
+# Glossar-URIs (:Kreditkarte etc.) werden direkt als owl:NamedIndividual
+# verwendet – kein zweiter zahlung:-Eintrag, kein skos:exactMatch nötig.
+# =============================================================================
+
+zahlung:AllelaenderGruppe a owl:NamedIndividual ;
+    rdfs:label      "Alle Länder"@de ;
+    dct:description "Sammelkonzept: keine geografische Einschränkung."@de .
+
+# --- Kreditkarte ---
+:Kreditkarte a owl:NamedIndividual ;
+    zahlung:verfügbarInLaendergruppe zahlung:AllelaenderGruppe ;
+    dct:description  "Wird für alle Länder angeboten; keine Einschränkung."@de ;
+    dct:source       <inputs/meeting-checkout-versand.md> ;
+    dct:contributor  person:Sarah ;
+    dct:date         "2024-03-05"^^xsd:date .
+
+# --- PayPal ---
+:PayPal a owl:NamedIndividual ;
+    zahlung:verfügbarInLaendergruppe zahlung:EU_Laender ;
+    zahlung:verfügbarInLand          zahlung:UK ;
+    zahlung:verfügbarInLand          zahlung:CH ;
+    zahlung:regelBegründung          "PayPal-Gebühren außerhalb EU zu hoch, nicht rentabel (Thomas, Meeting 2024-03-05)."@de ;
+    dct:description                  "Verfügbar in EU-Ländern, UK und Schweiz; nicht rentabel in anderen Regionen."@de ;
+    dct:source                       <inputs/meeting-checkout-versand.md> ;
+    dct:contributor                  person:Thomas ;
+    dct:date                         "2024-03-05"^^xsd:date .
+
+# --- Rechnung ---
+:Rechnung a owl:NamedIndividual ;
+    zahlung:bedingung  "Nur für Bestandskunden (mind. 1 abgeschlossene Bestellung, kein offener Mahnfall)."@de ;
+    dct:description    "Eingeschränkte Zahlungsmethode; an Kundenstatus geknüpft."@de ;
+    dct:source         <inputs/meeting-checkout-versand.md> ;
+    dct:contributor    person:Sarah ;
+    dct:date           "2024-03-05"^^xsd:date .
+
+# --- Sofortüberweisung ---
+:Sofortuberweisung a owl:NamedIndividual ;
+    zahlung:verfügbarInLand  zahlung:DE ;
+    zahlung:verfügbarInLand  zahlung:AT ;
+    zahlung:verfügbarInLand  zahlung:CH ;
+    dct:description          "Nur im DACH-Raum verfügbar."@de ;
+    dct:source               <inputs/meeting-checkout-versand.md> ;
+    dct:contributor          person:Sarah ;
+    dct:date                 "2024-03-05"^^xsd:date .
+
+# --- Ratenkauf (außer Scope) ---
+:Ratenkauf a owl:NamedIndividual, meta:AusserScope ;
+    meta:scopeStatus         "ausserScope" ;
+    meta:ausserScopeGrund    "Von Thomas im Meeting 2024-03-05 angesprochen, jedoch vorerst aus dem Launch-Scope genommen."@de ;
+    dct:source               <inputs/meeting-checkout-versand.md> ;
+    dct:contributor          person:Thomas ;
+    dct:date                 "2024-03-05"^^xsd:date .
+
+# =============================================================================
+# Zahlungsregeln als explizite Instanzen
+# =============================================================================
+
+# --- Regel: Rechnung nur für Bestandskunden ---
+zahlung:Regel_Rechnung_Bestandskunde a :Zahlungsregel, owl:NamedIndividual ;
+    rdfs:label                    "Regel: Rechnung nur für Bestandskunden"@de ;
+    zahlung:betrifftZahlungsmethode :Rechnung ;
+    zahlung:betrifftKundentyp     :Bestandskunde ;
+    zahlung:regelBegründung       "Mind. 1 abgeschlossene Bestellung und kein offener Mahnfall erforderlich."@de ;
+    dct:description               "Kunden ohne vorherige Bestellung oder mit offenem Mahnfall sind von der Zahlungsart Rechnung ausgeschlossen."@de ;
+    dct:source                    <inputs/meeting-checkout-versand.md> ;
+    dct:contributor               person:Sarah ;
+    dct:date                      "2024-03-05"^^xsd:date .
+
+# --- Regel: PayPal-Gebühren außerhalb EU/UK/CH ---
+zahlung:Regel_PayPal_Gebietsbeschraenkung a :Zahlungsregel, owl:NamedIndividual ;
+    rdfs:label                    "Regel: PayPal nur EU + UK + CH"@de ;
+    zahlung:betrifftZahlungsmethode :PayPal ;
+    zahlung:regelBegründung       "Gebührenstruktur von PayPal außerhalb dieser Regionen macht das Angebot unwirtschaftlich."@de ;
+    dct:description               "PayPal wird ausschließlich in EU-Ländern, UK und der Schweiz angeboten."@de ;
+    dct:source                    <inputs/meeting-checkout-versand.md> ;
+    dct:contributor               person:Thomas ;
+    dct:date                      "2024-03-05"^^xsd:date .
+
+# --- Regel: Sofortüberweisung nur DACH ---
+zahlung:Regel_Sofortueberweisung_DACH a :Zahlungsregel, owl:NamedIndividual ;
+    rdfs:label                    "Regel: Sofortüberweisung nur DACH"@de ;
+    zahlung:betrifftZahlungsmethode :Sofortuberweisung ;
+    zahlung:regelBegründung       "Technische und regulatorische Verfügbarkeit auf DACH beschränkt."@de ;
+    dct:description               "Sofortüberweisung ist nur in Deutschland, Österreich und der Schweiz verfügbar."@de ;
+    dct:source                    <inputs/meeting-checkout-versand.md> ;
+    dct:contributor               person:Sarah ;
+    dct:date                      "2024-03-05"^^xsd:date .
+
+# =============================================================================
+# Offene Punkte
+# =============================================================================
+
+zahlung:OffenerPunkt_Ratenkauf a owl:NamedIndividual, meta:OffenerPunkt ;
+    rdfs:label       "Ratenkauf: Scope-Entscheidung steht aus"@de ;
+    dct:description  "Ratenkauf wurde von Thomas im Meeting erwähnt, aber vorerst aus dem Launch-Scope genommen. Kein finales Nein – Entscheidung für spätere Iteration offen."@de ;
+    dct:created      "2024-03-05"^^xsd:date ;
+    meta:scopeStatus "offen" ;
+    dct:contributor  person:Thomas ;
+    dct:source       <inputs/meeting-checkout-versand.md> .
+
+# =============================================================================
+# SHACL-Regeln
+# =============================================================================
+
+# --- Regel: Rechnung erfordert Bestandskunde ---
+zahlung:RechnungNurBestandskundeShape a sh:NodeShape ;
+    sh:targetNode    :Rechnung ;
+    rdfs:label       "Regel: Rechnung nur für Bestandskunden"@de ;
+    rdfs:comment     "Eine Bestellung mit Zahlungsart Rechnung ist nur gültig, wenn der Kunde ein Bestandskunde ohne Mahnfall ist."@de ;
+    dct:source       <inputs/meeting-checkout-versand.md> ;
+    dct:contributor  person:Sarah ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message  "Zahlungsart Rechnung ist nur für Bestandskunden ohne offenen Mahnfall erlaubt."@de ;
+        sh:severity sh:Violation ;
+        sh:select   """
+            PREFIX zahlung: <https://shop.example.org/zahlung#>
+            PREFIX :        <https://shop.example.org/glossary#>
+            SELECT $this ?bestellung
+            WHERE {
+                ?bestellung zahlung:hatZahlungsmethode zahlung:Rechnung ;
+                            zahlung:hatKunde ?kunde .
+                FILTER NOT EXISTS {
+                    ?kunde a :Bestandskunde .
+                }
+            }
+        """ ;
+    ] .
+
+# --- Regel: PayPal nur in erlaubten Ländern ---
+zahlung:PayPalGebietsShape a sh:NodeShape ;
+    sh:targetNode    :PayPal ;
+    rdfs:label       "Regel: PayPal nur EU + UK + CH"@de ;
+    dct:source       <inputs/meeting-checkout-versand.md> ;
+    dct:contributor  person:Thomas ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message  "PayPal ist außerhalb von EU, UK und CH nicht verfügbar."@de ;
+        sh:severity sh:Violation ;
+        sh:select   """
+            PREFIX zahlung: <https://shop.example.org/zahlung#>
+            SELECT $this ?bestellung ?land
+            WHERE {
+                ?bestellung zahlung:hatZahlungsmethode zahlung:PayPal ;
+                            zahlung:liefertNachLand ?land .
+                FILTER(?land NOT IN (
+                    zahlung:DE, zahlung:AT, zahlung:CH, zahlung:UK
+                ))
+                FILTER NOT EXISTS { ?land a zahlung:EU_Laender }
+            }
+        """ ;
+    ] .
+
+# --- Regel: Sofortüberweisung nur DACH ---
+zahlung:SofortueberweisungDACHShape a sh:NodeShape ;
+    sh:targetNode    :Sofortuberweisung ;
+    rdfs:label       "Regel: Sofortüberweisung nur DACH"@de ;
+    dct:source       <inputs/meeting-checkout-versand.md> ;
+    dct:contributor  person:Sarah ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message  "Sofortüberweisung ist nur in DE, AT und CH verfügbar."@de ;
+        sh:severity sh:Violation ;
+        sh:select   """
+            PREFIX zahlung: <https://shop.example.org/zahlung#>
+            SELECT $this ?bestellung ?land
+            WHERE {
+                ?bestellung zahlung:hatZahlungsmethode zahlung:Sofortueberweisung ;
+                            zahlung:liefertNachLand ?land .
+                FILTER(?land NOT IN (zahlung:DE, zahlung:AT, zahlung:CH))
+            }
+        """ ;
+    ] .
+
+# --- Regel: Ratenkauf nicht im Scope ---
+zahlung:RatenkaufAusserScopeShape a sh:NodeShape ;
+    sh:targetNode    :Ratenkauf ;
+    rdfs:label       "Regel: Ratenkauf außer Scope"@de ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message  "Ratenkauf ist nicht im Launch-Scope. Zahlungsart darf nicht aktiv verwendet werden."@de ;
+        sh:severity sh:Warning ;
+        sh:select   """
+            PREFIX zahlung: <https://shop.example.org/zahlung#>
+            SELECT $this ?bestellung
+            WHERE {
+                ?bestellung zahlung:hatZahlungsmethode zahlung:Ratenkauf .
+            }
+        """ ;
+    ] .
+

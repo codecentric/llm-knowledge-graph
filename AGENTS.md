@@ -5,8 +5,9 @@
 Dieses Repository enthält einen **RDF Knowledge Graph** (Turtle-Dateien), der die
 Fachdomäne des Shops strukturiert und maschinenlesbar dokumentiert.
 
-**Wenn der Nutzer eine inhaltliche Frage stellt** – z. B. zu Entitäten, Regeln,
-Beziehungen oder Metadaten der modellierten Domäne – gilt immer:
+**Wenn der Nutzer eine inhaltliche Frage stellt** – z. B. zu Versandregeln,
+Exportbeschränkungen, Produktkategorien, Preisregeln, Stakeholdern oder anderen
+Fachthemen – gilt immer:
 
 > 🔍 **Zuerst den Knowledge Graph per SPARQL abfragen, dann antworten.**
 

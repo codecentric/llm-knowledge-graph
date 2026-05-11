@@ -1,0 +1,40 @@
+# Fehlende owl:Class-Deklaration: Glossar-Konzepte, die als rdf:type einer
+# Instanz verwendet werden, aber noch nicht als owl:Class gepunnt sind.
+#
+# Ausführung (alle Graphdateien übergeben):
+#   node .agents/skills/sparql-query/scripts/query.js \
+#     --file graph/glossary.ttl \
+#     --file graph/versand.ttl \
+#     --file graph/zahlungsmethoden.ttl \
+#     --query queries/glossary/fehlende-owl-class.rq
+#
+# Erwartetes Ergebnis: 0 Zeilen
+#
+# Wann schlägt diese Query an?
+#   Ein Domänenmodul schreibt z.B.:
+#     versand:DHL_Standard a :Versandpartner .
+#   Aber im Glossar fehlt noch:
+#     :Versandpartner a owl:Class .
+#
+# Was sie NICHT prüft:
+#   Duplikate im falschen Namespace → dafür: duplikat-check.rq
+
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX :     <https://shop.example.org/glossary#>
+
+SELECT DISTINCT ?konzept ?label WHERE {
+  # Konzept ist im Glossar als skos:Concept vorhanden ...
+  ?konzept a skos:Concept ;
+           skos:prefLabel ?label .
+
+  # ... und wird irgendwo als rdf:type einer Instanz verwendet ...
+  ?instanz a ?konzept .
+
+  # ... aber owl:Class fehlt noch
+  FILTER NOT EXISTS { ?konzept a owl:Class }
+
+  # Nur Glossar-Namespace prüfen
+  FILTER(STRSTARTS(STR(?konzept), "https://shop.example.org/glossary#"))
+}
+ORDER BY ?label
