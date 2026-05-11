@@ -16,6 +16,7 @@
 @prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
 @prefix dct:     <http://purl.org/dc/terms/> .
 @prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix versand: <https://shop.example.org/versand#> .
 
 # =============================================================================
 # Ontologie-Header
@@ -55,7 +56,8 @@ zahlung:UK a zahlung:Land ; rdfs:label "Vereinigtes Königreich"@de .
 
 zahlung:EU_Laender a owl:Class ;
     rdfs:label      "EU-Ländergruppe"@de ;
-    dct:description "Sammelkonzept für alle EU-Mitgliedsstaaten; DE und AT sind implizit enthalten."@de .
+    dct:description "Sammelkonzept für alle EU-Mitgliedsstaaten;"@de ;
+    rdfs:member     zahlung:DE, zahlung:AT .
 
 # =============================================================================
 # Properties
