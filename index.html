@@ -152,7 +152,7 @@
   import init, { Store } from 'https://cdn.jsdelivr.net/npm/oxigraph@0.3.10/web.js';
 
   const SPARQL = `
-    PREFIX app:  <https://example.org/apps#>
+    PREFIX app:  <https://shop.example.org/apps#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX dct:  <http://purl.org/dc/terms/>
     PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
@@ -172,7 +172,7 @@
   `;
 
   // IRI-Präfix der App-Ontologie → relativer Dateipfad
-  const APP_IRI_BASE = 'https://example.org/apps/';
+  const APP_IRI_BASE = 'https://shop.example.org/apps/';
   const OWL_IMPORTS  = 'http://www.w3.org/2002/07/owl#imports';
 
   async function fetchTtl(path) {
@@ -243,7 +243,7 @@
       // 2. Alle App-TTLs parallel laden
       const appTtls = await Promise.all(paths.map(fetchTtl));
       appTtls.forEach((ttl, i) =>
-        store.load(ttl, 'text/turtle', 'https://example.org/')
+        store.load(ttl, 'text/turtle', 'https://shop.example.org/')
       );
 
       // 3. SPARQL → Karten rendern
