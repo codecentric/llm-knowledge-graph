@@ -4,5 +4,7 @@
 
 <https://example.org/apps/manifest>
     a owl:Ontology ;
-    dct:title   "App-Manifest"@de .
+    dct:title   "App-Manifest"@de ;
+    owl:imports <https://example.org/apps/glossar> ;
     # owl:imports ergänzen wenn Apps angelegt werden
+    .
