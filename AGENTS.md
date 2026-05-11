@@ -45,22 +45,25 @@ cd .agents/skills/sparql-query && npm install
 
 # Abfrage ausführen:
 node .agents/skills/sparql-query/scripts/query.js \
-  --file graph/versand.ttl \
-  --sparql "PREFIX versand: <https://shop.example.org/versand#> SELECT ..."
+  --file graph/<modul>.ttl \
+  --sparql "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 20"
 ```
 
 ### Wichtige Prefixe
 
+> Diese Prefixe sind projektspezifisch. Nach dem Namespace-Setup anpassen.
+> Standard-Vokabular (skos, owl, rdfs, dct, xsd, schema) bleibt immer gleich.
+
 ```sparql
-PREFIX :        <https://shop.example.org/glossary#>
-PREFIX versand: <https://shop.example.org/versand#>
-PREFIX person:  <https://shop.example.org/personen#>
-PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
-PREFIX owl:     <http://www.w3.org/2002/07/owl#>
-PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX dct:     <http://purl.org/dc/terms/>
-PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
-PREFIX schema:  <https://schema.org/>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX owl:    <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX schema: <https://schema.org/>
+PREFIX sh:     <http://www.w3.org/ns/shacl#>
+# Domänenspezifische Prefixe hier ergänzen, z. B.:
+# PREFIX :  <https://example.org/domain#>
 ```
 
 ---
@@ -72,7 +75,7 @@ Nur die tatsächlich geänderten Dateien übergeben:
 
 ```bash
 # Eine oder mehrere konkrete Dateien prüfen (bevorzugt):
-node .agents/skills/sparql-query/scripts/validate.js graph/versand.ttl queries/versand/laendersperren.rq
+node .agents/skills/sparql-query/scripts/validate.js graph/<modul>.ttl queries/<modul>/<query>.rq
 
 # Alle Dateien prüfen (nur wenn viele Dateien auf einmal geändert wurden):
 npm run validate
