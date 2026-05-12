@@ -1,0 +1,16 @@
+# Versandpartner, die ausschließlich für Sperrgut zuständig sind
+# Ausführen:
+#   node .agents/skills/sparql-query/scripts/query.js \
+#     --file graph/versand.ttl \
+#     --query queries/versand/sperrgut-partner.rq
+
+PREFIX versand: <https://shop.example.org/versand#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+PREFIX domain: <https://shop.example.org/glossary#>
+
+SELECT ?label WHERE {
+  ?partner a domain:Versandpartner ;
+           versand:nurFuerSperrgut true ;
+           rdfs:label ?label .
+}
