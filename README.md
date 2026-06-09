@@ -1,6 +1,6 @@
 # LLM + Knowledge Graph – Praxisbeispiel
 
-> Begleitcode zum Artikel *„Knowledge Graphs als Langzeitgedächtnis für AI-Agenten"*
+> Begleitcode zum Artikel *"Wissen statt Raten – Wie Knowledge Graphs KI-Agenten ein zuverlässiges Langzeitgedächtnis geben"*
 
 ---
 
@@ -85,6 +85,14 @@ Das LLM muss **nicht mehr wissen** – es muss nur noch **fragen und erklären**
 └── queries/               # SPARQL-Abfragen, nach Fachmodul geordnet
 ```
 
+### `apps/` – Interaktive Visualisierungen
+
+Die generierten HTML-Visualisierungen des Knowledge Graphs sind gehostet unter
+
+**https://codecentric.github.io/llm-knowledge-graph/**
+
+Dort lassen sich die einzelnen Fachbereiche direkt im Browser erkunden.
+
 ### `graph/` – Der Knowledge Graph
 
 Alle RDF/Turtle-Dateien (`.ttl`) liegen zentral im Ordner `graph/`. Der Graph wächst
@@ -165,5 +173,4 @@ und komfortabel machen.
 
 ## Weiterführend
 
-Dieser Code begleitet den Artikel:
-> *„Knowledge Graphs als Langzeitgedächtnis für AI-Agenten – wie LLMs aufhören zu raten und anfangen nachzuschlagen"*
+Dieser Code begleitet den Artikel: *"Wissen statt Raten – Wie Knowledge Graphs KI-Agenten ein zuverlässiges Langzeitgedächtnis geben"*
