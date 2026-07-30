@@ -125,29 +125,27 @@ pi lädt `AGENTS.md` automatisch als Systemkontext. Darin steht das **Graph-firs
 
 ---
 
-## Abgrenzung: pi vs. Claude Code / Cursor
+## Abgrenzung: pi vs. Claude Code
 
-| Fähigkeit | pi ✅ | Claude Code / Cursor |
+Das Repo läuft in **beiden** Tools. Der Großteil ist portabel; nur die interaktiven
+pi-Overlays bleiben pi-exklusiv. Details zur Claude-Code-Seite: [claude-code-verwendung.md](claude-code-verwendung.md).
+
+| Fähigkeit | pi | Claude Code |
 |---|---|---|
-| `AGENTS.md` als Systemkontext | ✅ automatisch | ✅ (Claude Code liest es auch) |
-| Skills aus `.agents/skills/` | ✅ native Unterstützung | ⚠️ nur wenn Agent die Dateien manuell liest |
-| `graph-gate` Extension aktiv | ✅ blockiert `read` auf TTL | ❌ kein Intercept-Mechanismus |
-| `shacl-guard` Extension aktiv | ✅ SHACL-Check nach jedem TTL-Schreibvorgang | ❌ kein `tool_result`-Hook |
-| SPARQL-Abfrage-Workflow | ✅ durch Extension erzwungen | ⚠️ muss manuell per Prompt angewiesen werden |
-| Vorgefertigte `.rq`-Queries in `queries/` | ✅ Agent kennt sie via Skill | ⚠️ Agent findet sie nur wenn er danach sucht |
-| `kg-browser` (TUI-Overlay, `Alt+K`) | ✅ interaktiver Graph-Browser | ❌ kein TUI-Overlay-Mechanismus |
-| `kg-mention` (`#Konzept`-Autocomplete) | ✅ live Vorschläge + Auto-Kontext | ❌ kein Editor-Autocomplete-API |
+| `AGENTS.md` als Systemkontext | ✅ automatisch | ✅ via `CLAUDE.md` → `@AGENTS.md` |
+| Skills aus `.agents/skills/` | ✅ native Unterstützung | ✅ via Symlinks unter `.claude/skills/` (gleicher Agent-Skills-Standard) |
+| TTL-Direktzugriff sperren | ✅ Extension `graph-gate` (`tool_call`) | ✅ `PreToolUse`-Hook `.claude/hooks/graph-gate.mjs` |
+| SHACL-Check nach TTL-Schreiben | ✅ Extension `shacl-guard` (`tool_result`) | ✅ `PostToolUse`-Hook `.claude/hooks/shacl-guard.mjs` (`decision: block`) |
+| SPARQL-Abfrage-Workflow | ✅ durch Extension erzwungen | ✅ durch Hook erzwungen + in `AGENTS.md` beschrieben |
+| Vorgefertigte `.rq`-Queries in `queries/` | ✅ Agent kennt sie via Skill | ✅ dito (Skill via Symlink verfügbar) |
+| `#Konzept` → Auto-Kontext | ✅ `kg-mention` (+ Live-Autocomplete) | ✅ `UserPromptSubmit`-Hook `kg-mention.mjs` (⚠️ **ohne** Live-Autocomplete) |
+| Graph durchstöbern | ✅ `kg-browser` TUI-Overlay (`Alt+K`) | ⚠️ `/kg`-Skill (SPARQL-Suche, **kein** TUI-Overlay) |
 
-**Was mit Claude Code trotzdem funktioniert:**
-- Inhaltliche Fragen – wenn du explizit sagst *„frag den Graph per SPARQL, lies nicht die TTL direkt"*
-- Graph erweitern, Turtle schreiben und validieren
-- HTML-Visualisierungen generieren
-- Die Skills manuell lesen lassen: *„lies `.agents/skills/sparql-query/SKILL.md`"*
-
-**Was fehlt ohne pi:**
-- Die automatische Sperre gegen direktes TTL-Lesen (der Agent könnte Turtle als Text analysieren statt SPARQL zu benutzen – und dabei Zusammenhänge übersehen oder halluzinieren)
-- `kg-browser` und `kg-mention` – kein anderes Tool hat einen Editor-Autocomplete-API oder TUI-Overlays
-- Die nahtlose Skill-Entdeckung beim Session-Start
+**Was pi-exklusiv bleibt (kein Claude-Code-Äquivalent):**
+- **Live-Autocomplete** beim Tippen von `#` – Claude Code hat kein Editor-Autocomplete-API.
+  Die Kontext-Injektion beim Absenden funktioniert aber via Hook vollständig.
+- **`kg-browser` als interaktives TUI-Overlay** (`Alt+K`, Tab-Kategorien, Markieren, Scroll).
+  Der `/kg`-Skill deckt denselben Zweck (Einträge suchen + als Kontext laden) ab, aber nicht-interaktiv.
 
 ---
 
