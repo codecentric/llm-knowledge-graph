@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/graph-gate.mjs\"",
+            "statusMessage": "graph-gate: TTL-Direktzugriff prüfen"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/shacl-guard.mjs\"",
+            "timeout": 40,
+            "statusMessage": "shacl-guard: SHACL-Validierung"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/kg-mention.mjs\"",
+            "timeout": 20,
+            "statusMessage": "kg-mention: #-Konzepte auflösen"
+          }
+        ]
+      }
+    ]
+  }
+}
